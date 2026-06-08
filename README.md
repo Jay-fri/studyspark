@@ -268,3 +268,5 @@ All functions share `supabase/functions/_shared/cors.ts` for consistent CORS hea
 ## License
 
 MIT © StudyLM
+
+niceee
