@@ -766,7 +766,6 @@ const COST_FIELDS: { key: string; label: string; desc: string }[] = [
 
 function TokenCostsTab() {
   const qc = useQueryClient();
-  const adminProfile = useAuthStore((s) => s.profile);
 
   const { data: saved, isLoading } = useQuery<Record<string, number>>({
     queryKey: ["app-settings", "token_costs"],

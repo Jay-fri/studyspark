@@ -58,7 +58,6 @@ export function LibraryDetailModal({ output, notebook, onClose }: Props) {
   }, [output, onClose]);
 
   const meta = output ? TYPE_META[output.type] ?? TYPE_META.summary : null;
-  const Icon = meta?.icon;
 
   const canExport = output && ["quiz","flashcards","summary","studyguide"].includes(output.type);
 
@@ -87,9 +86,9 @@ export function LibraryDetailModal({ output, notebook, onClose }: Props) {
           >
             {/* Header */}
             <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--border)] bg-[var(--surface-1)] shrink-0">
-              {Icon && meta && (
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${meta.bg}`}>
-                  <Icon className={`w-5 h-5 ${meta.color}`} />
+              {meta && (
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-lg" style={{ background: meta.bg }}>
+                  {meta.emoji}
                 </div>
               )}
               <div className="flex-1 min-w-0">
