@@ -76,10 +76,9 @@ export async function initializePayment(
     customizations: {
       title:       "StudyLM Token Top-up",
       description: "Purchase study tokens",
-      // Only send a logo URL in production — localhost URLs are blocked by Flutterwave's HTTPS checkout
-      ...(import.meta.env.VITE_APP_URL?.startsWith("https")
-        ? { logo: `${import.meta.env.VITE_APP_URL}/logo.jpg` }
-        : {}),
+      logo:        import.meta.env.VITE_APP_URL?.startsWith("https")
+        ? `${import.meta.env.VITE_APP_URL}/logo.jpg`
+        : "",
     },
     meta:    { user_id: profile.id, tokens },
     callback: onSuccess,

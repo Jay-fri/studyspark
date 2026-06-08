@@ -1,15 +1,15 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { subDays, format, startOfDay, parseISO } from "date-fns";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend,
+  ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line,
 } from "recharts";
 import {
   LayoutDashboard, Users, CreditCard, BarChart2, Megaphone, Cpu,
   Zap, Search, Gift, BookOpen, ShieldCheck, ShieldOff, UserCog,
-  PlusCircle, Loader2, AlertTriangle, Check, X, RefreshCw,
+  PlusCircle, Loader2, AlertTriangle, Check, X,
   TrendingUp, TrendingDown, Trash2, ToggleLeft, ToggleRight,
 } from "lucide-react";
 import toast from "react-hot-toast";

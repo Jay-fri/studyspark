@@ -177,7 +177,7 @@ export default function NotebookPage() {
   const studioProps = {
     outputs:        aiOutputs,
     isGenerating,
-    generatingType,
+    generatingType: generatingType as import("@/types").AIOutputType | null,
     balance:        safeBalance,
     onGenerate:     handleGenerate,
     onOpen:         handleOpen,
@@ -272,10 +272,8 @@ export default function NotebookPage() {
             minSize="200px"
             collapsible
             collapsedSize="44px"
-            onResize={(size, unit) => {
-              if (unit === "px" && size <= 44) setSourcesCollapsed(true);
-              else if (unit === "px" && size > 44) setSourcesCollapsed(false);
-            }}
+            onCollapse={() => setSourcesCollapsed(true)}
+            onExpand={() => setSourcesCollapsed(false)}
             className="h-full"
           >
             <SourcePanel
@@ -301,10 +299,8 @@ export default function NotebookPage() {
             minSize="200px"
             collapsible
             collapsedSize="44px"
-            onResize={(size, unit) => {
-              if (unit === "px" && size <= 44) setStudioCollapsed(true);
-              else if (unit === "px" && size > 44) setStudioCollapsed(false);
-            }}
+            onCollapse={() => setStudioCollapsed(true)}
+            onExpand={() => setStudioCollapsed(false)}
             className="h-full"
           >
             <StudioPanel

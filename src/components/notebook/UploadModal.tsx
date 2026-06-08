@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { X, Upload, FileText, Type, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { useUploadSource, type UploadProgress } from "@/hooks/useUploadSource";
 import { cn } from "@/lib/utils";

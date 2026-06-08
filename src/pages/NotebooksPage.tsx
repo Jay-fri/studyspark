@@ -181,7 +181,7 @@ function NotebookModal({
 
 // ── Quick-action dropdown per card ───────────────────────────────────────────
 function CardMenu({
-  nb,
+  nb: _nb,
   onClose,
   onRename,
   onDuplicate,
@@ -469,7 +469,7 @@ export default function NotebooksPage() {
           <NotebookModal
             title="New Notebook"
             onClose={() => setShowCreate(false)}
-            onSave={(data) => createNotebook.mutateAsync({ ...data })}
+            onSave={(data) => createNotebook.mutateAsync({ ...data }).then(() => {})}
           />
         )}
       </AnimatePresence>
@@ -482,7 +482,7 @@ export default function NotebooksPage() {
             initial={renamingNb}
             onClose={() => setRenamingNb(null)}
             onSave={(data) =>
-              patchNotebook.mutateAsync({ id: renamingNb.id, ...data })
+              patchNotebook.mutateAsync({ id: renamingNb.id, ...data }).then(() => {})
             }
           />
         )}

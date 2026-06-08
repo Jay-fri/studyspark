@@ -11,7 +11,7 @@ import { LibraryCard, TYPE_META } from "@/components/library/LibraryCard";
 import { LibraryDetailModal }   from "@/components/library/LibraryDetailModal";
 import toast from "react-hot-toast";
 import {
-  exportQuizPDF, exportQuizText, exportFlashcardsCSV,
+  exportQuizPDF, exportFlashcardsCSV,
   exportSummaryMarkdown, exportStudyGuidePDF,
 } from "@/lib/exportUtils";
 

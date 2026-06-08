@@ -86,7 +86,7 @@ function IOSInstructions({ browser, onDone }: { browser: "safari" | "chrome" | "
 }
 
 export function PWAPrompt() {
-  const { showBanner, install, dismiss, canInstall, isIOS, isSafari } = usePWAInstall();
+  const { showBanner, install, dismiss, isIOS, isSafari } = usePWAInstall();
   const [showIOSGuide, setShowIOSGuide] = useState(false);
 
   const handleInstallClick = () => {
