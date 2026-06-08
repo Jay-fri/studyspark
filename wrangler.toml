@@ -1,3 +1,9 @@
 name = "studylm"
 compatibility_date = "2024-01-01"
 pages_build_output_dir = "dist"
+
+[vars]
+VITE_SUPABASE_URL = "https://yguqquyvuflcmlhwdzal.supabase.co"
+VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlndXFxdXl2dWZsY21saHdkemFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4NDUyODksImV4cCI6MjA5NjQyMTI4OX0.Eb71mNckde5fVlZbDeO-tVR8WACRD5jMKl6XTHyYX2c"
+VITE_FLUTTERWAVE_PUBLIC_KEY = "FLWPUBK_TEST-7df5282a6c7a3900f7024fb94fd65f2e-X"
+VITE_APP_URL = "https://studylm.pages.dev"
