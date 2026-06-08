@@ -1,48 +1,50 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, SortDesc, Library, X, Loader2 } from "lucide-react";
+import {
+  Search, X, Loader2, LayoutGrid, List,
+  Download, Trash2, ArrowUpRight, ChevronDown,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import { format } from "date-fns";
 import { supabase } from "@/services/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { useNotebookStore } from "@/stores/notebookStore";
-import type { AIOutput, AIOutputType } from "@/types";
-import { cn } from "@/lib/utils";
-import { LibraryCard, TYPE_META } from "@/components/library/LibraryCard";
-import { LibraryDetailModal }   from "@/components/library/LibraryDetailModal";
+import type { AIOutput, AIOutputType, Notebook } from "@/types";
+import { LibraryCard, TYPE_META, getPreview } from "@/components/library/LibraryCard";
+import { LibraryDetailModal } from "@/components/library/LibraryDetailModal";
 import toast from "react-hot-toast";
 import {
   exportQuizPDF, exportFlashcardsCSV,
   exportSummaryMarkdown, exportStudyGuidePDF,
 } from "@/lib/exportUtils";
 
-type SortMode = "newest" | "oldest" | "notebook";
+type SortMode  = "newest" | "oldest";
+type ViewMode  = "grid" | "list";
+type FilterKey = AIOutputType | "all";
 
-const FILTER_TABS: { key: AIOutputType | "all"; label: string }[] = [
-  { key: "all",        label: "All"          },
-  { key: "summary",    label: "Summaries"    },
-  { key: "quiz",       label: "Quizzes"      },
-  { key: "flashcards", label: "Flashcards"   },
-  { key: "mindmap",    label: "Mind Maps"    },
-  { key: "studyguide", label: "Study Guides" },
-  { key: "keyconcepts",label: "Key Concepts" },
-  { key: "podcast",    label: "Podcasts"     },
+const TYPE_ORDER: FilterKey[] = [
+  "all", "summary", "quiz", "flashcards", "mindmap", "studyguide", "keyconcepts", "podcast",
 ];
 
-const SORT_OPTIONS: { key: SortMode; label: string }[] = [
-  { key: "newest",   label: "Newest"   },
-  { key: "oldest",   label: "Oldest"   },
-  { key: "notebook", label: "Notebook" },
-];
+interface NotebookSection {
+  notebookId: string;
+  notebook:   Notebook | undefined;
+  outputs:    AIOutput[];
+  latestAt:   number;
+}
 
 export default function LibraryPage() {
   const userId    = useAuthStore((s) => s.user?.id);
   const notebooks = useNotebookStore((s) => s.notebooks);
   const qc        = useQueryClient();
 
-  const [filter, setFilter]   = useState<AIOutputType | "all">("all");
-  const [sort, setSort]       = useState<SortMode>("newest");
-  const [search, setSearch]   = useState("");
-  const [selected, setSelected] = useState<AIOutput | null>(null);
+  const [filter,    setFilter]    = useState<FilterKey>("all");
+  const [sort,      setSort]      = useState<SortMode>("newest");
+  const [search,    setSearch]    = useState("");
+  const [view,      setView]      = useState<ViewMode>("grid");
+  const [selected,  setSelected]  = useState<AIOutput | null>(null);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   const { data: outputs = [], isLoading } = useQuery<AIOutput[]>({
     queryKey: ["library-outputs", userId],
@@ -74,175 +76,429 @@ export default function LibraryPage() {
     const nb    = notebooks.find((n) => n.id === output.notebook_id);
     const title = nb?.title ?? "Notebook";
     const c     = output.content;
-    if (c.type === "quiz")           exportQuizPDF(c.questions, title);
-    else if (c.type === "flashcards")    exportFlashcardsCSV(c.cards, title);
-    else if (c.type === "summary")       exportSummaryMarkdown(c.text, title);
-    else if (c.type === "studyguide")    exportStudyGuidePDF(c.sections, title);
+    if      (c.type === "quiz")       exportQuizPDF(c.questions, title);
+    else if (c.type === "flashcards") exportFlashcardsCSV(c.cards, title);
+    else if (c.type === "summary")    exportSummaryMarkdown(c.text, title);
+    else if (c.type === "studyguide") exportStudyGuidePDF(c.sections, title);
     else toast("No export available for this type");
   };
 
-  // Filter + sort + search
+  const allOutputs = useMemo(
+    () => outputs.filter((o) => o.type !== "chat_history"),
+    [outputs],
+  );
+
+  const countFor = (key: FilterKey) =>
+    key === "all" ? allOutputs.length : allOutputs.filter((o) => o.type === key).length;
+
+  const visibleTabs = TYPE_ORDER.filter((k) => k === "all" || countFor(k) > 0);
+
   const filtered = useMemo(() => {
-    let result = outputs.filter((o) => o.type !== "chat_history");
-
+    let result = allOutputs;
     if (filter !== "all") result = result.filter((o) => o.type === filter);
-
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter((o) => {
-        const nb = notebooks.find((n) => n.id === o.notebook_id);
-        const title  = `${nb?.title ?? ""} ${TYPE_META[o.type]?.label ?? ""}`.toLowerCase();
-        const c = o.content;
-        let body = "";
+        const nb    = notebooks.find((n) => n.id === o.notebook_id);
+        const label = `${nb?.title ?? ""} ${TYPE_META[o.type]?.label ?? ""}`.toLowerCase();
+        const c     = o.content;
+        let body    = "";
         if (c.type === "summary")     body = c.text ?? "";
         if (c.type === "podcast")     body = c.script ?? "";
         if (c.type === "studyguide")  body = c.sections?.map((s) => s.heading).join(" ") ?? "";
         if (c.type === "keyconcepts") body = c.concepts?.map((k) => k.term).join(" ") ?? "";
-        return title.includes(q) || body.toLowerCase().includes(q);
+        return label.includes(q) || body.toLowerCase().includes(q);
       });
     }
+    return result;
+  }, [allOutputs, filter, search, notebooks]);
 
-    return [...result].sort((a, b) => {
-      if (sort === "newest") return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-      if (sort === "oldest") return new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
-      // by notebook
-      const nbA = notebooks.find((n) => n.id === a.notebook_id)?.title ?? "";
-      const nbB = notebooks.find((n) => n.id === b.notebook_id)?.title ?? "";
-      return nbA.localeCompare(nbB);
+  // Group filtered outputs by notebook, sorted by most-recently-active section first
+  const sections = useMemo<NotebookSection[]>(() => {
+    const map = new Map<string, NotebookSection>();
+    for (const output of filtered) {
+      const key = output.notebook_id ?? "__orphaned__";
+      if (!map.has(key)) {
+        map.set(key, {
+          notebookId: key,
+          notebook:   notebooks.find((n) => n.id === output.notebook_id),
+          outputs:    [],
+          latestAt:   0,
+        });
+      }
+      const s   = map.get(key)!;
+      const ts  = new Date(output.updated_at).getTime();
+      s.outputs.push(output);
+      if (ts > s.latestAt) s.latestAt = ts;
+    }
+    // Sort outputs within each section
+    for (const s of map.values()) {
+      s.outputs.sort((a, b) =>
+        sort === "oldest"
+          ? new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()
+          : new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      );
+    }
+    return Array.from(map.values()).sort((a, b) => b.latestAt - a.latestAt);
+  }, [filtered, notebooks, sort]);
+
+  const toggleCollapse = (id: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
     });
-  }, [outputs, filter, sort, search, notebooks]);
 
-  const totalByType = (type: AIOutputType | "all") =>
-    type === "all" ? outputs.filter((o) => o.type !== "chat_history").length
-    : outputs.filter((o) => o.type === type).length;
-
-  const selectedNotebook = selected ? notebooks.find((n) => n.id === selected.notebook_id) : undefined;
+  const selectedNotebook = selected
+    ? notebooks.find((n) => n.id === selected.notebook_id)
+    : undefined;
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+    <div className="max-w-6xl mx-auto">
 
-      {/* Page header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-display text-[var(--text-primary)]">My Library</h1>
-        <p className="text-sm text-[var(--text-muted)] mt-0.5">
-          All your AI-generated study materials in one place
-        </p>
-      </div>
+      {/* ── Header ───────────────────────────────────────────────────────── */}
+      <div
+        className="px-4 sm:px-6 lg:px-8 pt-6 pb-4"
+        style={{ borderBottom: "0.5px solid var(--border-subtle)" }}
+      >
+        <div className="flex items-center justify-between gap-4 mb-5">
+          <div>
+            <h1 className="text-2xl font-display" style={{ color: "var(--text-primary)" }}>
+              Library
+            </h1>
+            <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>
+              {allOutputs.length === 0
+                ? "No AI outputs yet"
+                : `${allOutputs.length} output${allOutputs.length !== 1 ? "s" : ""} across ${sections.length} notebook${sections.length !== 1 ? "s" : ""}`}
+            </p>
+          </div>
 
-      {/* Controls bar */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-5">
-        {/* Search */}
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search library…"
-            className="w-full pl-9 pr-8 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--brand-primary)] transition-colors"
-          />
-          {search && (
-            <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+                style={{ color: "var(--text-muted)" }}
+              />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search…"
+                className="w-44 sm:w-56 pl-9 pr-8 py-2 rounded-xl text-sm outline-none transition-colors"
+                style={{
+                  background: "var(--surface-2)",
+                  border: "0.5px solid var(--border)",
+                  color: "var(--text-primary)",
+                }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--brand-primary)")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
 
-        {/* Sort */}
-        <div className="flex items-center gap-1.5">
-          <SortDesc className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
-          <div className="flex rounded-xl border border-[var(--border)] overflow-hidden">
-            {SORT_OPTIONS.map((opt) => (
+            <div
+              className="hidden sm:flex items-center gap-1 p-1 rounded-xl"
+              style={{ background: "var(--surface-2)", border: "0.5px solid var(--border)" }}
+            >
               <button
-                key={opt.key}
-                onClick={() => setSort(opt.key)}
-                className={cn(
-                  "px-3 py-1.5 text-xs font-medium transition-colors",
-                  sort === opt.key
-                    ? "bg-[var(--brand-primary)] text-white"
-                    : "bg-[var(--surface-1)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-                )}
+                onClick={() => setView("grid")}
+                className="p-1.5 rounded-lg transition-all"
+                style={
+                  view === "grid"
+                    ? { background: "var(--surface-0)", color: "var(--text-primary)", boxShadow: "var(--shadow-sm)" }
+                    : { color: "var(--text-dim)" }
+                }
               >
-                {opt.label}
+                <LayoutGrid className="w-3.5 h-3.5" />
               </button>
-            ))}
+              <button
+                onClick={() => setView("list")}
+                className="p-1.5 rounded-lg transition-all"
+                style={
+                  view === "list"
+                    ? { background: "var(--surface-0)", color: "var(--text-primary)", boxShadow: "var(--shadow-sm)" }
+                    : { color: "var(--text-dim)" }
+                }
+              >
+                <List className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* ── Filter tabs + sort ────────────────────────────────────────────── */}
+        {allOutputs.length > 0 && (
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none -mb-px">
+            {visibleTabs.map((key) => {
+              const isActive = filter === key;
+              const meta     = key !== "all" ? TYPE_META[key] : null;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setFilter(key)}
+                  className="relative flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium whitespace-nowrap transition-colors shrink-0"
+                  style={{ color: isActive ? "var(--brand-primary)" : "var(--text-muted)" }}
+                  onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.color = "var(--text-secondary)"; }}
+                  onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = "var(--text-muted)"; }}
+                >
+                  {meta ? `${meta.emoji} ${meta.label}` : "All"}
+                  <span
+                    className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+                    style={
+                      isActive
+                        ? { background: "rgba(249,115,22,0.12)", color: "var(--brand-primary)" }
+                        : { background: "var(--surface-2)", color: "var(--text-dim)" }
+                    }
+                  >
+                    {countFor(key)}
+                  </span>
+                  {isActive && (
+                    <motion.div
+                      layoutId="library-tab-indicator"
+                      className="absolute bottom-0 left-0 right-0 h-[2px] rounded-full"
+                      style={{ background: "var(--brand-primary)" }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+
+            <div className="ml-auto pl-4 flex items-center gap-1 shrink-0">
+              {(["newest", "oldest"] as SortMode[]).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSort(s)}
+                  className="px-2.5 py-1 rounded-lg text-xs font-medium capitalize transition-colors"
+                  style={
+                    sort === s
+                      ? { background: "var(--surface-3)", color: "var(--text-primary)" }
+                      : { color: "var(--text-dim)" }
+                  }
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Filter chips */}
-      <div className="flex items-center gap-1.5 flex-wrap mb-6">
-        {FILTER_TABS.map((tab) => {
-          const count = totalByType(tab.key);
-          if (tab.key !== "all" && count === 0) return null;
-          return (
+      {/* ── Body ─────────────────────────────────────────────────────────── */}
+      <div className="px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+
+        {isLoading && (
+          <div className="flex justify-center py-24">
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--brand-primary)" }} />
+          </div>
+        )}
+
+        {!isLoading && allOutputs.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center py-24 text-center"
+          >
+            <p className="text-4xl mb-4">📚</p>
+            <h3 className="text-base font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
+              Your library is empty
+            </h3>
+            <p className="text-sm max-w-xs" style={{ color: "var(--text-muted)" }}>
+              Open a notebook and generate a summary, quiz, or flashcards — they'll all appear here.
+            </p>
+          </motion.div>
+        )}
+
+        {!isLoading && allOutputs.length > 0 && filtered.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <p className="text-3xl mb-3">🔍</p>
+            <p className="text-sm font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
+              Nothing matches your filters
+            </p>
             <button
-              key={tab.key}
-              onClick={() => setFilter(tab.key)}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all",
-                filter === tab.key
-                  ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                  : "bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)]/30 hover:text-[var(--text-primary)]"
-              )}
+              onClick={() => { setSearch(""); setFilter("all"); }}
+              className="text-sm mt-1"
+              style={{ color: "var(--brand-primary)" }}
             >
-              {tab.label}
-              <span className={cn(
-                "px-1.5 py-0.5 rounded-full text-[10px] font-semibold",
-                filter === tab.key ? "bg-white/20 text-white" : "bg-[var(--surface-2)] text-[var(--text-muted)]"
-              )}>
-                {count}
-              </span>
+              Clear filters
             </button>
+          </div>
+        )}
+
+        {/* ── Notebook sections ─────────────────────────────────────────── */}
+        {!isLoading && sections.map((section) => {
+          const nb          = section.notebook;
+          const color       = nb?.color ?? "#6B7280";
+          const isCollapsed = collapsed.has(section.notebookId);
+
+          return (
+            <motion.section
+              key={section.notebookId}
+              layout
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              {/* Section header */}
+              <div className="flex items-center gap-3 mb-4">
+                <div
+                  className="w-[3px] h-5 rounded-full shrink-0"
+                  style={{ background: color }}
+                />
+
+                <button
+                  onClick={() => toggleCollapse(section.notebookId)}
+                  className="flex items-center gap-2.5 min-w-0 flex-1 text-left group"
+                >
+                  <span className="text-lg leading-none">{nb?.emoji ?? "📚"}</span>
+                  <span
+                    className="text-sm font-semibold truncate"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {nb?.title ?? "Unknown notebook"}
+                  </span>
+                  <span
+                    className="px-1.5 py-0.5 rounded-full text-[10px] font-bold shrink-0"
+                    style={{ background: `${color}18`, color }}
+                  >
+                    {section.outputs.length}
+                  </span>
+                  <motion.div
+                    animate={{ rotate: isCollapsed ? -90 : 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="shrink-0"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" style={{ color: "var(--text-dim)" }} />
+                  </motion.div>
+                </button>
+
+                {nb && (
+                  <Link
+                    to={`/notebooks/${nb.id}`}
+                    className="flex items-center gap-1 text-xs shrink-0 px-2.5 py-1.5 rounded-lg transition-colors"
+                    style={{ color: "var(--text-dim)" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = color; e.currentTarget.style.background = `${color}12`; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "transparent"; }}
+                  >
+                    <ArrowUpRight className="w-3 h-3" />
+                    Open
+                  </Link>
+                )}
+              </div>
+
+              {/* Section content */}
+              <AnimatePresence initial={false}>
+                {!isCollapsed && (
+                  <motion.div
+                    key="content"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.22, ease: "easeInOut" }}
+                    style={{ overflow: "hidden" }}
+                  >
+                    {view === "grid" ? (
+                      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {section.outputs.map((output) => (
+                          <LibraryCard
+                            key={output.id}
+                            output={output}
+                            notebook={nb}
+                            onOpen={setSelected}
+                            onDelete={(id) => deleteOutput.mutate(id)}
+                            onExport={handleExport}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div
+                        className="rounded-2xl overflow-hidden"
+                        style={{ background: "var(--surface-1)", border: "0.5px solid var(--border)" }}
+                      >
+                        {section.outputs.map((output, i) => {
+                          const meta    = TYPE_META[output.type] ?? TYPE_META.summary;
+                          const preview = getPreview(output);
+                          const isLast  = i === section.outputs.length - 1;
+                          return (
+                            <div
+                              key={output.id}
+                              className="flex items-center gap-4 px-5 py-3.5 transition-colors"
+                              style={{
+                                borderBottom: isLast ? "none" : "0.5px solid var(--border-subtle)",
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-2)")}
+                              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                            >
+                              <div
+                                className="w-2 h-2 rounded-full shrink-0"
+                                style={{ background: color }}
+                              />
+
+                              <button
+                                onClick={() => setSelected(output)}
+                                className="flex-1 min-w-0 text-left flex items-center gap-4"
+                              >
+                                <span
+                                  className="hidden sm:inline-flex shrink-0 items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full"
+                                  style={{ background: meta.bg, color: meta.color }}
+                                >
+                                  {meta.emoji} {meta.label}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  {preview ? (
+                                    <p className="text-sm truncate" style={{ color: "var(--text-primary)" }}>
+                                      {preview}
+                                    </p>
+                                  ) : (
+                                    <p className="text-sm" style={{ color: "var(--text-dim)" }}>
+                                      {meta.label}
+                                    </p>
+                                  )}
+                                </div>
+                              </button>
+
+                              <span className="text-xs shrink-0" style={{ color: "var(--text-dim)" }}>
+                                {format(new Date(output.updated_at), "MMM d")}
+                              </span>
+
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  onClick={() => handleExport(output)}
+                                  className="p-1.5 rounded-lg transition-colors"
+                                  style={{ color: "var(--text-dim)" }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text-secondary)"; e.currentTarget.style.background = "var(--surface-3)"; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "transparent"; }}
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => deleteOutput.mutate(output.id)}
+                                  className="p-1.5 rounded-lg transition-colors"
+                                  style={{ color: "var(--text-dim)" }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.color = "var(--brand-danger)"; e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "transparent"; }}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.section>
           );
         })}
       </div>
 
-      {/* Loading */}
-      {isLoading && (
-        <div className="flex justify-center py-16">
-          <Loader2 className="w-6 h-6 text-[var(--brand-primary)] animate-spin" />
-        </div>
-      )}
-
-      {/* Empty state */}
-      {!isLoading && filtered.length === 0 && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center justify-center py-20 rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface-1)] text-center"
-        >
-          <Library className="w-10 h-10 text-[var(--text-muted)] mb-3" />
-          <h3 className="text-base font-medium text-[var(--text-primary)] mb-1">
-            {search ? "No results found" : filter === "all" ? "No outputs yet" : `No ${filter}s yet`}
-          </h3>
-          <p className="text-sm text-[var(--text-muted)] max-w-xs">
-            {search ? "Try a different search term" : "Open a notebook and generate AI content to build your library"}
-          </p>
-        </motion.div>
-      )}
-
-      {/* Grid */}
-      {!isLoading && filtered.length > 0 && (
-        <AnimatePresence mode="popLayout">
-          <motion.div
-            layout
-            className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
-          >
-            {filtered.map((output) => (
-              <LibraryCard
-                key={output.id}
-                output={output}
-                notebook={notebooks.find((n) => n.id === output.notebook_id)}
-                onOpen={setSelected}
-                onDelete={(id) => deleteOutput.mutate(id)}
-                onExport={handleExport}
-              />
-            ))}
-          </motion.div>
-        </AnimatePresence>
-      )}
-
-      {/* Detail modal */}
       <LibraryDetailModal
         output={selected}
         notebook={selectedNotebook}

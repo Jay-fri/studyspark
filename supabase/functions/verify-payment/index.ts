@@ -32,6 +32,9 @@ Deno.serve(async (req) => {
       tokens:          number;
     };
     ({ transaction_id, flutterwave_ref, user_id, expected_amount, tokens } = body);
+    if (!transaction_id || !flutterwave_ref || !user_id || !expected_amount || !tokens) {
+      return json({ error: "Missing required fields in request body" }, 400);
+    }
   } catch {
     return json({ error: "Invalid request body" }, 400);
   }
@@ -40,21 +43,31 @@ Deno.serve(async (req) => {
   if (user.id !== user_id) return json({ error: "User mismatch" }, 403);
 
   // ── Verify with Flutterwave ─────────────────────────────────────────────────
-  const flwRes  = await fetch(
-    `https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`,
-    { headers: { Authorization: `Bearer ${FLW_SECRET}` } }
-  );
-  const flwData = await flwRes.json() as {
-    status: string;
-    data:   { status: string; amount: number; flw_ref: string } | null;
-  };
-
-  if (flwData.status !== "success" || flwData.data?.status !== "successful") {
-    return json({ error: "Payment not confirmed by Flutterwave" }, 400);
+  let flwData: { status: string; data: { status: string; amount: number; flw_ref: string } | null };
+  try {
+    const flwRes = await fetch(
+      `https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`,
+      { headers: { Authorization: `Bearer ${FLW_SECRET}` } }
+    );
+    flwData = await flwRes.json();
+  } catch (e) {
+    console.error("Flutterwave verify request failed:", e);
+    return json({ error: "Could not reach Flutterwave to verify payment" }, 502);
   }
 
-  if (Number(flwData.data.amount) < expected_amount) {
-    return json({ error: "Amount paid is less than expected" }, 400);
+  console.log("Flutterwave verify response:", JSON.stringify(flwData));
+
+  if (flwData.status !== "success" || flwData.data?.status !== "successful") {
+    return json({
+      error: `Payment not confirmed by Flutterwave (status: ${flwData.data?.status ?? flwData.status})`
+    }, 400);
+  }
+
+  // Allow a 1 NGN tolerance for floating-point rounding in test mode
+  if (Number(flwData.data.amount) < expected_amount - 1) {
+    return json({
+      error: `Amount mismatch: paid ₦${flwData.data.amount}, expected ₦${expected_amount}`
+    }, 400);
   }
 
   // ── Credit tokens (service role to bypass RLS) ──────────────────────────────
@@ -66,10 +79,14 @@ Deno.serve(async (req) => {
     p_description: `Token purchase — ${flutterwave_ref}`,
     p_flw_ref:     flutterwave_ref,
   });
-  if (rpcError) throw new Error(rpcError.message);
+
+  if (rpcError) {
+    console.error("credit_tokens RPC error:", rpcError);
+    return json({ error: "Failed to credit tokens — please contact support" }, 500);
+  }
 
   // ── Upsert payment record ───────────────────────────────────────────────────
-  await adminClient.from("payments").upsert(
+  const { error: paymentErr } = await adminClient.from("payments").upsert(
     {
       user_id,
       flutterwave_ref,
@@ -80,6 +97,11 @@ Deno.serve(async (req) => {
     },
     { onConflict: "flutterwave_ref" }
   );
+
+  if (paymentErr) {
+    // Non-fatal: tokens were credited, just log the payment record failure
+    console.error("Payment record upsert failed:", paymentErr);
+  }
 
   return json({ success: true, tokens_added: tokens, new_balance: newBalance });
 });

@@ -25,7 +25,8 @@ const SettingsPage      = lazy(() => import("@/pages/SettingsPage"));
 const StudyReviewPage   = lazy(() => import("@/pages/StudyReviewPage"));
 const StudyModePage     = lazy(() => import("@/pages/StudyModePage"));
 const AdminPage         = lazy(() => import("@/pages/AdminPage"));
-const NotFoundPage      = lazy(() => import("@/pages/NotFoundPage"));
+const NotFoundPage           = lazy(() => import("@/pages/NotFoundPage"));
+const PaymentCallbackPage    = lazy(() => import("@/pages/PaymentCallbackPage"));
 
 function PageLoader() {
   return (
@@ -49,8 +50,9 @@ export default function App() {
           <Suspense fallback={<PageLoader />}>
             <Routes>
               {/* Public */}
-              <Route path="/"     element={<LandingPage />} />
-              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/"                  element={<LandingPage />} />
+              <Route path="/auth"              element={<AuthPage />} />
+              <Route path="/payment-callback"  element={<PaymentCallbackPage />} />
 
               {/* Protected — regular users */}
               <Route element={<AuthGuard />}>

@@ -217,6 +217,10 @@ export function useNotebookChatMessages(notebookId: string | undefined) {
   const qc = useQueryClient();
   const { chatMessages, setChatMessages } = useNotebookStore();
 
+  // Track which notebook we last loaded messages for, so we can detect notebook switches.
+  // We use a ref instead of state to avoid triggering extra renders.
+  const loadedForRef = useRef<string | undefined>(undefined);
+
   const query = useQuery({
     queryKey: ["chat_messages", notebookId],
     queryFn: async (): Promise<ChatMessage[]> => {
@@ -232,13 +236,21 @@ export function useNotebookChatMessages(notebookId: string | undefined) {
     staleTime: Infinity,
   });
 
-  // Only populate store when it's empty (don't overwrite in-progress streaming)
+  // Populate (or re-populate) the store whenever:
+  //   1. This is a different notebook than we last loaded for, OR
+  //   2. The store was externally cleared (setActiveNotebook wipes it)
+  // We intentionally exclude chatMessages from deps to avoid re-running
+  // during streaming (where messages are added optimistically).
   useEffect(() => {
-    if (query.data && chatMessages.length === 0) {
+    if (!query.data) return;
+    const storeIsEmpty = chatMessages.length === 0;
+    const isNewNotebook = loadedForRef.current !== notebookId;
+    if (isNewNotebook || storeIsEmpty) {
+      loadedForRef.current = notebookId;
       setChatMessages(query.data);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query.data]);
+  }, [query.data, notebookId, chatMessages.length]);
 
   const clearMessages = useMutation({
     mutationFn: async () => {
@@ -250,6 +262,7 @@ export function useNotebookChatMessages(notebookId: string | undefined) {
     },
     onSuccess: () => {
       setChatMessages([]);
+      loadedForRef.current = undefined;
       qc.removeQueries({ queryKey: ["chat_messages", notebookId] });
     },
   });

@@ -1,105 +1,91 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { useSRS } from "@/hooks/useSRS";
-import {
-  Plus,
-  Upload,
-  BookMarked,
-  Sparkles,
-  FileText,
-  Zap,
-  TrendingUp,
-  ChevronRight,
-  BookOpen,
-  ClipboardList,
-  Brain,
-  Repeat2,
-} from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { supabase } from "@/services/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { useNotebookStore } from "@/stores/notebookStore";
 import { useUIStore } from "@/stores/uiStore";
 import type { AIOutput } from "@/types";
-import { cn } from "@/lib/utils";
+import toast from "react-hot-toast";
 
-const container = {
+const stagger = {
   hidden: { opacity: 0 },
   show:   { opacity: 1, transition: { staggerChildren: 0.06 } },
 };
-
-const item = {
+const fadeUp = {
   hidden: { opacity: 0, y: 14 },
-  show:   { opacity: 1, y: 0, transition: { type: "spring", stiffness: 320, damping: 28 } },
+  show:   { opacity: 1, y: 0, transition: { type: "spring", stiffness: 360, damping: 30 } },
 };
 
-const OUTPUT_META: Record<string, { icon: React.ElementType; label: string; color: string }> = {
-  summary:     { icon: FileText,    label: "Summary",     color: "text-brand-primary"   },
-  quiz:        { icon: ClipboardList, label: "Quiz",      color: "text-brand-warning"   },
-  flashcards:  { icon: BookOpen,    label: "Flashcards",  color: "text-brand-accent"    },
-  mindmap:     { icon: Brain,       label: "Mind Map",    color: "text-brand-secondary" },
-  studyguide:  { icon: BookMarked,  label: "Study Guide", color: "text-brand-primary"   },
-  keyconcepts: { icon: Sparkles,    label: "Key Concepts",color: "text-brand-accent"    },
-  podcast:     { icon: Sparkles,    label: "Podcast",     color: "text-brand-secondary" },
+const OUTPUT_LABELS: Record<string, { label: string; emoji: string; color: string; bg: string }> = {
+  summary:     { label: "Summary",      emoji: "📄", color: "#F97316", bg: "rgba(249,115,22,0.10)"  },
+  quiz:        { label: "Quiz",         emoji: "✏️",  color: "#F59E0B", bg: "rgba(245,158,11,0.10)"  },
+  flashcards:  { label: "Flashcards",   emoji: "🃏", color: "#10B981", bg: "rgba(16,185,129,0.10)"  },
+  mindmap:     { label: "Mind map",     emoji: "🕸️",  color: "#8B5CF6", bg: "rgba(139,92,246,0.10)"  },
+  studyguide:  { label: "Study guide",  emoji: "📋", color: "#F97316", bg: "rgba(249,115,22,0.10)"  },
+  keyconcepts: { label: "Key concepts", emoji: "💡", color: "#3B82F6", bg: "rgba(59,130,246,0.10)"  },
+  podcast:     { label: "Podcast",      emoji: "🎙️",  color: "#EC4899", bg: "rgba(236,72,153,0.10)"  },
 };
 
-function greeting() {
+function greeting(name: string) {
   const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
+  const g = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  return `${g}, ${name}.`;
 }
 
-// Circular token arc (same as sidebar)
-function TokenArc({ balance, max = 1000 }: { balance: number; max?: number }) {
-  const r             = 22;
-  const circumference = 2 * Math.PI * r;
-  const pct           = Math.min(balance / max, 1);
-  const offset        = circumference * (1 - pct);
-  const strokeColor =
-    balance < 50  ? "var(--brand-danger)"
-    : balance < 100 ? "var(--brand-warning)"
-    : "var(--brand-primary)";
-
+function TokenBar({ balance, max = 1000 }: { balance: number; max?: number }) {
+  const pct = Math.min((balance / max) * 100, 100);
+  const color = balance < 50 ? "#EF4444" : balance < 200 ? "#F59E0B" : "#10B981";
   return (
-    <svg width="56" height="56" viewBox="0 0 56 56" className="-rotate-90">
-      <circle cx="28" cy="28" r={r} fill="none" stroke="var(--surface-2)" strokeWidth="4" />
-      <motion.circle
-        cx="28" cy="28" r={r}
-        fill="none"
-        stroke={strokeColor}
-        strokeWidth="4"
-        strokeLinecap="round"
-        strokeDasharray={circumference}
-        animate={{ strokeDashoffset: offset }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
+    <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: `${color}20` }}>
+      <motion.div
+        className="h-full rounded-full"
+        style={{ background: color }}
+        animate={{ width: `${pct}%` }}
+        transition={{ duration: 0.9, ease: "easeOut" }}
       />
-    </svg>
+    </div>
   );
 }
 
 export default function DashboardPage() {
-  const profile         = useAuthStore((s) => s.profile);
-  const notebooks       = useNotebookStore((s) => s.notebooks);
+  const profile               = useAuthStore((s) => s.profile);
+  const notebooks             = useNotebookStore((s) => s.notebooks);
   const { setPaymentModalOpen } = useUIStore();
-  const { getDueCards } = useSRS();
+  const { getDueCards }       = useSRS();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const userId = profile?.id;
-  const balance = profile?.study_tokens ?? 0;
-  const firstName = profile?.full_name?.split(" ")[0] ?? "Student";
-  const today = format(new Date(), "EEEE, MMMM d");
+  // Show a toast if redirected here from PaymentCallbackPage (e.g. 3DS card flow)
+  useEffect(() => {
+    const payment = searchParams.get("payment");
+    if (!payment) return;
+    if (payment === "success") {
+      toast.success("Payment received! Tokens will be credited shortly.");
+    } else if (payment === "cancelled") {
+      toast("Payment cancelled.", { icon: "ℹ️" });
+    } else {
+      toast.error("Payment was not completed — please try again.");
+    }
+    // Remove the query param so it doesn't re-fire on refresh
+    setSearchParams({}, { replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Recent AI outputs for activity feed
+  const userId    = profile?.id;
+  const balance   = profile?.study_tokens ?? 0;
+  const firstName = profile?.full_name?.split(" ")[0] ?? "there";
+  const today     = format(new Date(), "EEEE, MMMM d");
+
   const { data: recentOutputs = [] } = useQuery<AIOutput[]>({
     queryKey: ["recent-outputs", userId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("ai_outputs")
-        .select("*")
-        .order("updated_at", { ascending: false })
-        .limit(6);
+        .from("ai_outputs").select("*")
+        .order("updated_at", { ascending: false }).limit(6);
       if (error) throw error;
       return (data ?? []) as AIOutput[];
     },
@@ -107,13 +93,11 @@ export default function DashboardPage() {
     staleTime: 60_000,
   });
 
-  // Source count
   const { data: sourceCount = 0 } = useQuery<number>({
     queryKey: ["source-count", userId],
     queryFn: async () => {
       const { count, error } = await supabase
-        .from("sources")
-        .select("*", { count: "exact", head: true });
+        .from("sources").select("*", { count: "exact", head: true });
       if (error) throw error;
       return count ?? 0;
     },
@@ -121,7 +105,6 @@ export default function DashboardPage() {
     staleTime: 60_000,
   });
 
-  // Total due flashcards across all outputs
   const { data: allFlashcardOutputs = [] } = useQuery({
     queryKey: ["flashcard-outputs-srs", userId],
     queryFn: async () => {
@@ -142,228 +125,246 @@ export default function DashboardPage() {
     return count;
   }, [allFlashcardOutputs, getDueCards]);
 
-  const recentNotebooks = useMemo(() => notebooks.slice(0, 4), [notebooks]);
+  const recentNotebooks = useMemo(() => notebooks.slice(0, 3), [notebooks]);
 
-  const stats = [
-    { label: "Notebooks",  value: notebooks.length,          icon: BookMarked,  color: "text-brand-primary"   },
-    { label: "AI Outputs", value: recentOutputs.length,      icon: Sparkles,    color: "text-brand-secondary" },
-    { label: "Sources",    value: sourceCount,                icon: FileText,    color: "text-brand-accent"    },
-    { label: "Tokens Left",value: balance.toLocaleString(),   icon: Zap,         color: "text-brand-warning"   },
-  ];
+  const tokenLabel =
+    balance < 50  ? "Critically low — top up now" :
+    balance < 200 ? "Running low" :
+    "Tokens available";
+
+  const tokenColor =
+    balance < 50  ? "#EF4444" :
+    balance < 200 ? "#F59E0B" :
+    "#10B981";
+
+  // Summary text for subtitle
+  const summaryParts: string[] = [];
+  if (notebooks.length)   summaryParts.push(`${notebooks.length} notebook${notebooks.length !== 1 ? "s" : ""}`);
+  if (recentOutputs.length) summaryParts.push(`${recentOutputs.length} AI output${recentOutputs.length !== 1 ? "s" : ""}`);
+  if (sourceCount)        summaryParts.push(`${sourceCount} source${sourceCount !== 1 ? "s" : ""}`);
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
+      <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-8">
 
-      {/* Welcome banner */}
-      <motion.div
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-6 flex items-start justify-between gap-4"
-      >
-        <div>
-          <h1 className="text-2xl font-display text-text-primary">
-            {greeting()}, {firstName} 👋
+        {/* ── Hero ──────────────────────────────────────────────────────── */}
+        <motion.div variants={fadeUp} className="pt-2">
+          <p className="text-sm" style={{ color: "var(--text-dim)" }}>{today}</p>
+          <h1 className="text-3xl sm:text-4xl font-display mt-1 leading-tight" style={{ color: "var(--text-primary)" }}>
+            {greeting(firstName)}
           </h1>
-          <p className="text-sm text-text-muted mt-0.5">{today}</p>
-        </div>
-        <Link
-          to="/notebooks"
-          className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl gradient-brand text-white text-sm font-semibold shadow-md hover:opacity-90 transition-opacity shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          New Notebook
-        </Link>
-      </motion.div>
+          {summaryParts.length > 0 && (
+            <p className="text-base mt-2" style={{ color: "var(--text-muted)" }}>
+              {summaryParts.join(" · ")}
+            </p>
+          )}
 
-      <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
-
-        {/* Stats row */}
-        <motion.div variants={item} className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {stats.map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-surface-1 border border-border rounded-2xl p-4 shadow-sm"
-            >
-              <stat.icon className={`w-5 h-5 mb-3 ${stat.color}`} />
-              <p className="text-2xl font-display text-text-primary">{stat.value}</p>
-              <p className="text-xs text-text-muted mt-0.5">{stat.label}</p>
-            </div>
-          ))}
-        </motion.div>
-
-        {/* SRS Review Banner */}
-        {totalDue > 0 && (
-          <motion.div variants={item}>
-            <Link
-              to="/study/review"
-              className="flex items-center gap-4 p-4 rounded-2xl bg-[var(--brand-primary)]/8 border border-[var(--brand-primary)]/25 hover:border-[var(--brand-primary)]/50 hover:bg-[var(--brand-primary)]/12 transition-all group"
-            >
-              <div className="w-10 h-10 rounded-xl bg-[var(--brand-primary)]/15 flex items-center justify-center shrink-0">
-                <Repeat2 className="w-5 h-5 text-[var(--brand-primary)]" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-[var(--brand-primary)]">
-                  {totalDue} flashcard{totalDue !== 1 ? "s" : ""} due for review
-                </p>
-                <p className="text-xs text-text-muted">
-                  Keep your memory fresh with spaced repetition
-                </p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-[var(--brand-primary)] group-hover:translate-x-1 transition-transform shrink-0" />
-            </Link>
-          </motion.div>
-        )}
-
-        {/* Two-column section: token card + quick actions */}
-        <motion.div variants={item} className="grid sm:grid-cols-2 gap-4">
-
-          {/* Token status card */}
-          <div className="bg-surface-1 border border-border rounded-2xl p-5 flex items-center gap-5">
-            <div className="relative flex items-center justify-center">
-              <TokenArc balance={balance} />
-              <span
-                className={cn(
-                  "absolute text-[11px] font-bold",
-                  balance < 50 ? "text-brand-danger" : balance < 100 ? "text-brand-warning" : "text-brand-primary"
-                )}
-              >
-                {balance >= 1000 ? `${Math.floor(balance / 1000)}k` : balance}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-text-primary">
-                {balance.toLocaleString()} tokens
-              </p>
-              <p className="text-xs text-text-muted mt-0.5">
-                {balance < 50
-                  ? "Critically low — top up now"
-                  : balance < 200
-                  ? "Running low"
-                  : "Available balance"}
-              </p>
-              <button
-                onClick={() => setPaymentModalOpen(true)}
-                className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg gradient-brand text-white text-xs font-semibold hover:opacity-90 transition-opacity"
-              >
-                <Zap className="w-3 h-3" />
-                Top Up
-              </button>
-            </div>
-          </div>
-
-          {/* Quick actions */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Quick actions — emoji pills */}
+          <div className="flex flex-wrap gap-2 mt-5">
             {[
-              { to: "/notebooks",           icon: Plus,   label: "New Notebook",    bg: "bg-brand-primary/10",   color: "text-brand-primary"   },
-              { to: "/upload",              icon: Upload, label: "Upload Source",    bg: "bg-brand-secondary/10", color: "text-brand-secondary" },
-              { to: "/library",             icon: BookOpen,  label: "Browse Library",bg: "bg-brand-accent/10",    color: "text-brand-accent"    },
-              { to: "/notebooks",           icon: TrendingUp,label: "View Progress", bg: "bg-brand-warning/10",   color: "text-brand-warning"   },
-            ].map((action) => (
+              { to: "/notebooks", label: "New notebook", emoji: "📚" },
+              { to: "/library",   label: "My library",   emoji: "🗂️" },
+              ...(totalDue > 0 ? [{ to: "/study/review", label: `Review ${totalDue} cards`, emoji: "🔁" }] : []),
+            ].map(a => (
               <Link
-                key={action.label}
-                to={action.to}
-                className="flex flex-col items-center gap-2 p-4 rounded-xl bg-surface-1 border border-border hover:border-brand-primary/30 hover:shadow-sm transition-all group"
+                key={a.label}
+                to={a.to}
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all hover:-translate-y-px"
+                style={{
+                  background: "var(--surface-2)",
+                  color: "var(--text-secondary)",
+                  border: "0.5px solid var(--border)",
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = "var(--surface-3)";
+                  e.currentTarget.style.borderColor = "var(--brand-primary)";
+                  e.currentTarget.style.color = "var(--text-primary)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = "var(--surface-2)";
+                  e.currentTarget.style.borderColor = "var(--border)";
+                  e.currentTarget.style.color = "var(--text-secondary)";
+                }}
               >
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${action.bg}`}>
-                  <action.icon className={`w-4.5 h-4.5 ${action.color}`} />
-                </div>
-                <span className="text-xs font-medium text-text-secondary group-hover:text-text-primary text-center leading-tight">
-                  {action.label}
-                </span>
+                <span>{a.emoji}</span>
+                {a.label}
               </Link>
             ))}
           </div>
         </motion.div>
 
-        {/* Recent notebooks */}
-        <motion.div variants={item}>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-text-primary">Recent Notebooks</h2>
-            <Link to="/notebooks" className="flex items-center gap-1 text-xs text-brand-primary hover:underline">
-              View all <ChevronRight className="w-3 h-3" />
+        {/* ── Token strip ────────────────────────────────────────────────── */}
+        <motion.div variants={fadeUp}>
+          <div
+            className="rounded-2xl px-5 py-4 flex items-center gap-5"
+            style={{ background: "var(--surface-1)", border: "0.5px solid var(--border)" }}
+          >
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-2xl font-display" style={{ color: tokenColor }}>
+                  {balance.toLocaleString()}
+                </span>
+                <span className="text-xs" style={{ color: tokenColor }}>
+                  {tokenLabel}
+                </span>
+              </div>
+              <TokenBar balance={balance} />
+            </div>
+            <button
+              onClick={() => setPaymentModalOpen(true)}
+              className="shrink-0 px-4 py-2 rounded-xl text-white text-sm font-semibold gradient-brand hover:opacity-90 transition-opacity"
+            >
+              Top up
+            </button>
+          </div>
+        </motion.div>
+
+        {/* ── Flashcard review banner ─────────────────────────────────────── */}
+        {totalDue > 0 && (
+          <motion.div variants={fadeUp}>
+            <Link
+              to="/study/review"
+              className="flex items-center justify-between gap-4 px-5 py-4 rounded-2xl group transition-all"
+              style={{
+                background: "rgba(249,115,22,0.06)",
+                border: "0.5px solid rgba(249,115,22,0.2)",
+              }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(249,115,22,0.45)"}
+              onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(249,115,22,0.2)"}
+            >
+              <div>
+                <p className="text-base font-semibold" style={{ color: "var(--brand-primary)" }}>
+                  🔁  {totalDue} flashcard{totalDue !== 1 ? "s" : ""} due for review
+                </p>
+                <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>
+                  Keep your streak — takes just a few minutes
+                </p>
+              </div>
+              <ChevronRight
+                className="w-5 h-5 shrink-0 group-hover:translate-x-0.5 transition-transform"
+                style={{ color: "var(--brand-primary)" }}
+              />
+            </Link>
+          </motion.div>
+        )}
+
+        {/* ── Recent notebooks ────────────────────────────────────────────── */}
+        <motion.div variants={fadeUp}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
+              Recent notebooks
+            </h2>
+            <Link
+              to="/notebooks"
+              className="text-sm font-medium hover:underline flex items-center gap-1"
+              style={{ color: "var(--brand-primary)" }}
+            >
+              All notebooks <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
           {recentNotebooks.length > 0 ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {recentNotebooks.map((nb) => (
-                <Link
-                  key={nb.id}
-                  to={`/notebooks/${nb.id}`}
-                  className="group relative flex flex-col rounded-2xl border border-border bg-surface-1 overflow-hidden hover:border-brand-primary/40 hover:shadow-md transition-all"
-                >
-                  {/* Color bar */}
-                  <div
-                    className="h-1.5 w-full shrink-0"
-                    style={{ backgroundColor: nb.color || "var(--brand-primary)" }}
-                  />
-                  <div className="p-4 flex-1">
-                    <div className="text-2xl mb-2">{nb.emoji || "📚"}</div>
-                    <p className="text-sm font-semibold text-text-primary truncate group-hover:text-brand-primary transition-colors">
-                      {nb.title}
-                    </p>
-                    {nb.description && (
-                      <p className="text-xs text-text-muted mt-0.5 line-clamp-2">
-                        {nb.description}
+            <div className="grid sm:grid-cols-3 gap-3">
+              {recentNotebooks.map(nb => {
+                const color = nb.color || "#F97316";
+                return (
+                  <Link
+                    key={nb.id}
+                    to={`/notebooks/${nb.id}`}
+                    className="flex flex-col rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
+                    style={{
+                      background: "var(--surface-1)",
+                      border: "0.5px solid var(--border)",
+                      boxShadow: "var(--shadow-sm)",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.boxShadow = "var(--shadow-md)"}
+                    onMouseLeave={e => e.currentTarget.style.boxShadow = "var(--shadow-sm)"}
+                  >
+                    {/* Colored header zone */}
+                    <div className="px-5 pt-5 pb-4" style={{ background: `${color}0f` }}>
+                      <span className="text-2xl leading-none block">{nb.emoji || "📚"}</span>
+                      <p className="mt-2.5 text-sm font-semibold leading-snug line-clamp-2"
+                        style={{ color: "var(--text-primary)" }}>
+                        {nb.title}
                       </p>
-                    )}
-                    <p className="text-[10px] text-text-muted mt-2">
-                      {format(new Date(nb.updated_at), "MMM d")}
-                    </p>
-                  </div>
-                </Link>
-              ))}
+                    </div>
+                    <div className="px-5 py-3 flex items-center justify-between"
+                      style={{ borderTop: "0.5px solid var(--border-subtle)" }}>
+                      <p className="text-xs" style={{ color: "var(--text-dim)" }}>
+                        {formatDistanceToNow(new Date(nb.updated_at), { addSuffix: true })}
+                      </p>
+                      <div className="w-2 h-2 rounded-full" style={{ background: color }} />
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-12 rounded-2xl border border-dashed border-border bg-surface-1 text-center">
-              <BookMarked className="w-8 h-8 text-text-muted mb-3" />
-              <p className="text-sm font-medium text-text-primary">No notebooks yet</p>
-              <p className="text-xs text-text-muted mt-1 mb-4">
-                Create a notebook to organise your study materials
+            <div
+              className="py-14 rounded-2xl flex flex-col items-center justify-center text-center"
+              style={{ background: "var(--surface-1)", border: "0.5px solid var(--border)" }}
+            >
+              <p className="text-3xl mb-3">📚</p>
+              <p className="text-sm font-semibold mb-1" style={{ color: "var(--text-primary)" }}>No notebooks yet</p>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                Create your first to get started
               </p>
               <Link
                 to="/notebooks"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl gradient-brand text-white text-sm font-medium"
+                className="mt-5 px-4 py-2 rounded-xl gradient-brand text-white text-sm font-semibold hover:opacity-90 transition-opacity"
               >
-                <Plus className="w-4 h-4" />
-                Create Notebook
+                Create notebook
               </Link>
             </div>
           )}
         </motion.div>
 
-        {/* Recent activity */}
+        {/* ── Recent activity ─────────────────────────────────────────────── */}
         {recentOutputs.length > 0 && (
-          <motion.div variants={item}>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-text-primary">Recent Activity</h2>
-              <Link to="/library" className="flex items-center gap-1 text-xs text-brand-primary hover:underline">
-                Library <ChevronRight className="w-3 h-3" />
+          <motion.div variants={fadeUp}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>Recent activity</h2>
+              <Link
+                to="/library"
+                className="text-sm font-medium hover:underline flex items-center gap-1"
+                style={{ color: "var(--brand-primary)" }}
+              >
+                Library <ChevronRight className="w-3.5 h-3.5" />
               </Link>
             </div>
-            <div className="space-y-2">
-              {recentOutputs.slice(0, 5).map((ao) => {
-                const meta = OUTPUT_META[ao.type] ?? OUTPUT_META.summary;
-                const nb   = notebooks.find((n) => n.id === ao.notebook_id);
-                const Icon = meta.icon;
+
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{ background: "var(--surface-1)", border: "0.5px solid var(--border)" }}
+            >
+              {recentOutputs.slice(0, 5).map((ao, i) => {
+                const meta = OUTPUT_LABELS[ao.type] ?? OUTPUT_LABELS.summary;
+                const nb   = notebooks.find(n => n.id === ao.notebook_id);
+                const isLast = i === Math.min(recentOutputs.length, 5) - 1;
                 return (
                   <Link
                     key={ao.id}
                     to={`/notebooks/${ao.notebook_id}`}
-                    className="flex items-center gap-3 p-3.5 rounded-xl bg-surface-1 border border-border hover:border-brand-primary/30 transition-colors group"
+                    className="flex items-center gap-4 px-5 py-3.5 transition-colors"
+                    style={{ borderBottom: isLast ? "none" : "0.5px solid var(--border-subtle)" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--surface-2)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                   >
-                    <div className="w-8 h-8 rounded-lg bg-surface-2 flex items-center justify-center shrink-0">
-                      <Icon className={`w-4 h-4 ${meta.color}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-text-primary">
-                        {meta.label}
-                      </p>
-                      <p className="text-[11px] text-text-muted truncate">
-                        {nb?.title ?? "Unknown notebook"}
-                      </p>
-                    </div>
-                    <p className="text-[10px] text-text-muted shrink-0">
+                    {/* Type badge */}
+                    <span
+                      className="text-xs font-semibold px-2.5 py-1 rounded-full shrink-0"
+                      style={{ background: meta.bg, color: meta.color }}
+                    >
+                      {meta.emoji} {meta.label}
+                    </span>
+
+                    {/* Notebook title */}
+                    <p className="flex-1 text-sm truncate" style={{ color: "var(--text-secondary)" }}>
+                      {nb?.title ?? "—"}
+                    </p>
+
+                    {/* Date */}
+                    <p className="text-xs shrink-0" style={{ color: "var(--text-dim)" }}>
                       {format(new Date(ao.updated_at), "MMM d")}
                     </p>
                   </Link>

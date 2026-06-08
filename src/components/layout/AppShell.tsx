@@ -40,8 +40,12 @@ export function AppShell() {
         <main className={
           isNotebookView
             ? "flex-1 overflow-hidden relative"
-            : "flex-1 overflow-y-auto scrollbar-thin pb-28 md:pb-0 relative"
-        }>
+            : "flex-1 overflow-y-auto scrollbar-thin relative"
+          }
+          style={!isNotebookView ? {
+            paddingBottom: "calc(5rem + env(safe-area-inset-bottom, 0px))"
+          } : undefined}
+        >
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.div
               key={routeKey}
@@ -49,7 +53,7 @@ export function AppShell() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.14, ease: "easeOut" }}
-              className="h-full bg-[var(--surface-0)]"
+              className={isNotebookView ? "h-full bg-[var(--surface-0)]" : "min-h-full bg-[var(--surface-0)]"}
             >
               <Outlet />
             </motion.div>

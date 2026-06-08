@@ -7,6 +7,7 @@ import { useGroq } from "@/hooks/useGroq";
 import { useNotebookStore } from "@/stores/notebookStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useTokens } from "@/hooks/useTokens";
+import { useUIStore } from "@/stores/uiStore";
 import { TOKEN_COSTS } from "@/lib/tokenCounter";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -64,6 +65,7 @@ export function ChatPanel({ notebookId }: Props) {
   const { chatMessages, sources } = useNotebookStore();
   const profile  = useAuthStore((s) => s.profile);
   const { spend, balance } = useTokens();
+  const { setPaymentModalOpen } = useUIStore();
   const { isLoading: loadingHistory, clearMessages } = useNotebookChatMessages(notebookId);
 
   const [input, setInput]                   = useState("");
@@ -140,10 +142,14 @@ export function ChatPanel({ notebookId }: Props) {
   const handleSend = useCallback(async () => {
     const trimmed = input.trim();
     if (!trimmed || isStreaming) return;
+    if (balance < TOKEN_COSTS.chat) {
+      setPaymentModalOpen(true);
+      return;
+    }
     setInput("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     await chat(trimmed, notebookId);
-  }, [input, isStreaming, chat, notebookId]);
+  }, [input, isStreaming, balance, setPaymentModalOpen, chat, notebookId]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
@@ -213,7 +219,10 @@ export function ChatPanel({ notebookId }: Props) {
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.05 }}
-                      onClick={() => chat(q, notebookId)}
+                      onClick={() => {
+                        if (balance < TOKEN_COSTS.chat) { setPaymentModalOpen(true); return; }
+                        chat(q, notebookId);
+                      }}
                       className="text-left px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] text-xs text-[var(--text-secondary)] hover:border-[var(--brand-primary)]/40 hover:text-[var(--text-primary)] hover:bg-[var(--brand-primary)]/5 transition-all"
                     >
                       {q}

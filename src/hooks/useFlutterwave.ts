@@ -21,7 +21,11 @@ export function useFlutterwave() {
         tokensToAdd,
         async (response: FlutterwaveResponse) => {
           if (response.status !== "successful") {
-            toast.error("Payment was not completed");
+            toast.error(
+              response.status === "cancelled"
+                ? "Payment cancelled"
+                : "Payment was not completed — please try again"
+            );
             setIsLoading(false);
             return;
           }
@@ -39,16 +43,15 @@ export function useFlutterwave() {
               },
             });
 
-            if (error || !data?.success) {
-              toast.error(
-                (data as { error?: string } | null)?.error ?? "Token credit failed — contact support",
-                { id: verifyToast }
-              );
+            if (error || !(data as { success?: boolean } | null)?.success) {
+              const msg = (data as { error?: string } | null)?.error
+                ?? error?.message
+                ?? "Token credit failed — contact support";
+              toast.error(msg, { id: verifyToast });
               setIsLoading(false);
               return;
             }
 
-            // Refresh profile so balance updates in UI immediately
             const { data: fresh } = await supabase
               .from("profiles")
               .select("*")
@@ -64,7 +67,7 @@ export function useFlutterwave() {
 
           setIsLoading(false);
         },
-        () => setIsLoading(false)
+        () => setIsLoading(false),
       );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Payment initialisation failed");

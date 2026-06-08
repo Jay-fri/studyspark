@@ -7,10 +7,10 @@ declare global {
 }
 
 interface FlutterwaveConfig {
-  public_key:     string;
-  tx_ref:         string;
-  amount:         number;
-  currency:       string;
+  public_key:      string;
+  tx_ref:          string;
+  amount:          number;
+  currency:        string;
   payment_options: string;
   customer: {
     email: string;
@@ -64,11 +64,11 @@ export async function initializePayment(
   const txRef = `STUDYLM-${profile.id}-${Date.now()}`;
 
   window.FlutterwaveCheckout!({
-    public_key:     publicKey,
-    tx_ref:         txRef,
-    amount:         amountNgn,
-    currency:       "NGN",
-    payment_options: "card,ussd,transfer",
+    public_key:      publicKey,
+    tx_ref:          txRef,
+    amount:          amountNgn,
+    currency:        "NGN",
+    payment_options: "card,ussd,banktransfer",
     customer: {
       email: profile.email,
       name:  profile.full_name ?? profile.email,
@@ -76,11 +76,9 @@ export async function initializePayment(
     customizations: {
       title:       "StudyLM Token Top-up",
       description: "Purchase study tokens",
-      logo:        import.meta.env.VITE_APP_URL?.startsWith("https")
-        ? `${import.meta.env.VITE_APP_URL}/logo.jpg`
-        : "",
+      logo:        `${window.location.origin}/logo.jpg`,
     },
-    meta:    { user_id: profile.id, tokens },
+    meta:     { user_id: profile.id, tokens },
     callback: onSuccess,
     onclose:  onClose,
   });

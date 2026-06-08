@@ -116,7 +116,7 @@ function SourceItem({
           </button>
         </div>
       ) : (
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-0.5 transition-opacity">
           <button
             onClick={(e) => { e.stopPropagation(); startEdit(); }}
             className="p-1 rounded text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 transition-colors"
