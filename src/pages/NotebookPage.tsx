@@ -272,8 +272,9 @@ export default function NotebookPage() {
             minSize="200px"
             collapsible
             collapsedSize="44px"
-            onCollapse={() => setSourcesCollapsed(true)}
-            onExpand={() => setSourcesCollapsed(false)}
+            onResize={(size) => {
+              setSourcesCollapsed(size.inPixels <= 44);
+            }}
             className="h-full"
           >
             <SourcePanel
@@ -299,8 +300,9 @@ export default function NotebookPage() {
             minSize="200px"
             collapsible
             collapsedSize="44px"
-            onCollapse={() => setStudioCollapsed(true)}
-            onExpand={() => setStudioCollapsed(false)}
+            onResize={(size) => {
+              setStudioCollapsed(size.inPixels <= 44);
+            }}
             className="h-full"
           >
             <StudioPanel
