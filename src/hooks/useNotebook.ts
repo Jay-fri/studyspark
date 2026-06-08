@@ -3,10 +3,10 @@ import { useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/services/supabase";
 import { useNotebookStore } from "@/stores/notebookStore";
 import { useAuthStore } from "@/stores/authStore";
-import type { Notebook, Source, AIOutputType, AIOutputContent } from "@/types";
+import type { Notebook, Source, AIOutputType, AIOutputContent, GenerationOptions } from "@/types";
 import type { ChatMessage } from "@/types";
 import { generateAIOutput } from "@/services/groq";
-import { buildContext } from "@/lib/documentChunker";
+import { buildContextFromChunks } from "@/lib/documentChunker";
 import { useTokens } from "./useTokens";
 import type { OperationType } from "@/lib/tokenCounter";
 
@@ -21,11 +21,14 @@ export function useNotebooks() {
       const { data, error } = await supabase
         .from("notebooks")
         .select("*")
+        .eq("user_id", userId!)
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
     enabled: !!userId,
+    staleTime: 60_000,
+    gcTime:    10 * 60_000,
   });
 
   useEffect(() => { if (query.data) setNotebooks(query.data); }, [query.data, setNotebooks]);
@@ -104,9 +107,11 @@ export function useNotebookSources(notebookId: string | undefined) {
       return data ?? [];
     },
     enabled: !!notebookId,
+    staleTime: 2 * 60_000,
+    gcTime:    10 * 60_000,
   });
 
-  useEffect(() => { if (query.data) setSources(query.data); }, [query.data, setSources]);
+  useEffect(() => { if (query.data) setSources(query.data); }, [query.data, setSources, notebookId]);
 
   const renameSource = useMutation({
     mutationFn: async ({ id, title }: { id: string; title: string }): Promise<Source> => {
@@ -146,10 +151,26 @@ export function useAIGenerate(notebookId: string | undefined) {
     setGenerating(false);
   }, [setGenerating]);
 
-  const generate = async (type: AIOutputType): Promise<AIOutputContent> => {
+  const generate = async (type: AIOutputType, options?: GenerationOptions): Promise<AIOutputContent> => {
     if (!notebookId || !userId) throw new Error("No active notebook");
 
-    const context = buildContext(sources, selectedSourceIds, 6000);
+    // Fetch chunks on-demand for selected sources
+    const activeSources =
+      selectedSourceIds === "all"
+        ? sources
+        : sources.filter((s) => (selectedSourceIds as string[]).includes(s.id));
+
+    let rawChunks: { source_id: string; chunk_index: number; content: string }[] = [];
+    if (activeSources.length > 0) {
+      const { data } = await supabase
+        .from("source_chunks")
+        .select("source_id, chunk_index, content")
+        .in("source_id", activeSources.map((s) => s.id))
+        .order("chunk_index", { ascending: true });
+      rawChunks = data ?? [];
+    }
+
+    const context = buildContextFromChunks(rawChunks, sources, selectedSourceIds, 8000);
     if (!context.trim()) throw new Error("No source content — add sources first");
 
     abortRef.current?.abort();
@@ -159,7 +180,7 @@ export function useAIGenerate(notebookId: string | undefined) {
     setGenerating(true, type);
     try {
       await spend(type as OperationType);
-      const content = await generateAIOutput(type, context, controller.signal);
+      const content = await generateAIOutput(type, context, controller.signal, options);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.from("ai_outputs") as any)
@@ -206,9 +227,11 @@ export function useAIOutputs(notebookId: string | undefined) {
       return data ?? [];
     },
     enabled: !!notebookId,
+    staleTime: 5 * 60_000,
+    gcTime:    15 * 60_000,
   });
 
-  useEffect(() => { if (query.data) setAIOutputs(query.data); }, [query.data, setAIOutputs]);
+  useEffect(() => { if (query.data) setAIOutputs(query.data); }, [query.data, setAIOutputs, notebookId]);
 
   return query;
 }

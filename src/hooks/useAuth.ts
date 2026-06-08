@@ -52,7 +52,7 @@ export function useAuth() {
     if (error) throw error;
   };
 
-  const signUp = async (email: string, password: string, fullName: string, university?: string) => {
+  const signUp = async (email: string, password: string, fullName: string, university?: string): Promise<{ sessionAvailable: boolean }> => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -60,10 +60,8 @@ export function useAuth() {
     });
     if (error) throw error;
 
-    // Client-side fallback: upsert profile in case the DB trigger hasn't fired yet
-    // or the migration hasn't been applied to this Supabase project.
-    // ignoreDuplicates=true means: if the trigger already created the row, do nothing.
     if (data.user) {
+      // Insert profile row if the DB trigger hasn't created it yet
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase.from("profiles") as any).upsert(
         {
@@ -76,7 +74,18 @@ export function useAuth() {
         },
         { onConflict: "id", ignoreDuplicates: true }
       );
+
+      // Always patch university + full_name — if the trigger created the row first
+      // without these fields, the upsert above was a no-op and we'd lose the data.
+      await supabase
+        .from("profiles")
+        .update({ university: university ?? null, full_name: fullName })
+        .eq("id", data.user.id);
     }
+
+    // If Supabase returns a session immediately (email confirmation disabled),
+    // the onAuthStateChange listener will populate the store automatically.
+    return { sessionAvailable: !!data.session };
   };
 
   const signInWithGoogle = async () => {

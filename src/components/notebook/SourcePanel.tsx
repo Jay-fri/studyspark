@@ -12,6 +12,8 @@ import {
   X,
   ChevronLeft,
   Layers,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { useNotebookStore } from "@/stores/notebookStore";
 import { useNotebookSources } from "@/hooks/useNotebook";
@@ -98,11 +100,22 @@ function SourceItem({
         ) : (
           <p className="text-xs font-medium text-text-primary truncate">{source.title}</p>
         )}
-        {source.word_count && (
+        {source.processing_status === "pending" || source.processing_status === "processing" ? (
+          <p className="flex items-center gap-1 text-[10px] text-brand-primary mt-0.5">
+            <Loader2 className="w-2.5 h-2.5 animate-spin" />
+            {source.processing_status === "pending" ? "Queued…" : "Chunking…"}
+          </p>
+        ) : source.processing_status === "error" ? (
+          <p className="flex items-center gap-1 text-[10px] text-brand-danger mt-0.5">
+            <AlertCircle className="w-2.5 h-2.5" />
+            Processing failed
+          </p>
+        ) : source.word_count ? (
           <p className="text-[10px] text-text-muted mt-0.5">
             {source.word_count.toLocaleString()} words
+            {source.chunk_count ? ` · ${source.chunk_count} chunks` : ""}
           </p>
-        )}
+        ) : null}
       </div>
 
       {/* Actions */}

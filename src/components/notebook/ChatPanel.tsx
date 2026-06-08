@@ -8,7 +8,6 @@ import { useNotebookStore } from "@/stores/notebookStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useTokens } from "@/hooks/useTokens";
 import { useUIStore } from "@/stores/uiStore";
-import { TOKEN_COSTS } from "@/lib/tokenCounter";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
@@ -16,6 +15,30 @@ import { generateStarterQuestions } from "@/services/groq";
 import { buildContext } from "@/lib/documentChunker";
 import { useNotebookChatMessages } from "@/hooks/useNotebook";
 
+// ─── Streaming bubble ────────────────────────────────────────────────────────
+// Renders plain text (no markdown parsing) with a fade-in per flushed chunk and
+// a blinking cursor at the end. Cheap to re-render: no AST, no reconciler diff.
+function StreamingBubble({ content }: { content: string }) {
+  const prevLenRef = useRef(0);
+  const oldText    = content.slice(0, prevLenRef.current);
+  const newText    = content.slice(prevLenRef.current);
+  // Update synchronously — safe because RAF throttle means exactly one render per chunk batch
+  prevLenRef.current = content.length;
+
+  return (
+    <div className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+      {oldText}
+      {newText && (
+        <span key={oldText.length} className="chat-chunk">
+          {newText}
+        </span>
+      )}
+      <span className="chat-cursor" />
+    </div>
+  );
+}
+
+// ─── Fallback starters ───────────────────────────────────────────────────────
 const FALLBACK_STARTERS = [
   "Summarise the key points from my sources",
   "What are the main themes and concepts?",
@@ -64,7 +87,8 @@ export function ChatPanel({ notebookId }: Props) {
   const { chat, isStreaming }  = useGroq();
   const { chatMessages, sources } = useNotebookStore();
   const profile  = useAuthStore((s) => s.profile);
-  const { spend, balance } = useTokens();
+  const { spend, balance, liveCosts } = useTokens();
+  const chatCost = liveCosts.chat;
   const { setPaymentModalOpen } = useUIStore();
   const { isLoading: loadingHistory, clearMessages } = useNotebookChatMessages(notebookId);
 
@@ -95,7 +119,7 @@ export function ChatPanel({ notebookId }: Props) {
   }, [notebookId, sources.length]);
 
   const handleRegenerateStarters = async () => {
-    if (balance < TOKEN_COSTS.chat) { toast.error("Not enough tokens"); return; }
+    if (balance < chatCost) { toast.error("Not enough tokens"); return; }
     setLoadingStarters(true);
     try {
       await spend("chat", "Regenerate suggested questions");
@@ -127,9 +151,16 @@ export function ChatPanel({ notebookId }: Props) {
     ), { duration: 5000 });
   };
 
-  // Auto-scroll to bottom on new messages
+  // Scroll to bottom on new messages. Use "instant" during active streaming so the
+  // view tracks text appearing at 60fps without fighting a concurrent smooth scroll.
+  const prevMsgCountRef = useRef(chatMessages.length);
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const isNewMessage = chatMessages.length !== prevMsgCountRef.current;
+    prevMsgCountRef.current = chatMessages.length;
+    bottomRef.current?.scrollIntoView({
+      behavior: isNewMessage ? "smooth" : "instant",
+      block: "end",
+    });
   }, [chatMessages, isStreaming]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -142,7 +173,7 @@ export function ChatPanel({ notebookId }: Props) {
   const handleSend = useCallback(async () => {
     const trimmed = input.trim();
     if (!trimmed || isStreaming) return;
-    if (balance < TOKEN_COSTS.chat) {
+    if (balance < chatCost) {
       setPaymentModalOpen(true);
       return;
     }
@@ -220,7 +251,7 @@ export function ChatPanel({ notebookId }: Props) {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.05 }}
                       onClick={() => {
-                        if (balance < TOKEN_COSTS.chat) { setPaymentModalOpen(true); return; }
+                        if (balance < chatCost) { setPaymentModalOpen(true); return; }
                         chat(q, notebookId);
                       }}
                       className="text-left px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] text-xs text-[var(--text-secondary)] hover:border-[var(--brand-primary)]/40 hover:text-[var(--text-primary)] hover:bg-[var(--brand-primary)]/5 transition-all"
@@ -237,7 +268,7 @@ export function ChatPanel({ notebookId }: Props) {
                     className="mt-3 flex items-center gap-1.5 text-[11px] text-[var(--text-muted)] hover:text-[var(--brand-primary)] transition-colors"
                   >
                     <RefreshCw className="w-3 h-3" />
-                    Refresh suggestions · {TOKEN_COSTS.chat} tokens
+                    Refresh suggestions · {chatCost} tokens
                   </button>
                 )}
               </AnimatePresence>
@@ -246,7 +277,9 @@ export function ChatPanel({ notebookId }: Props) {
         )}
 
         {/* Messages */}
-        {chatMessages.map((msg, i) => (
+        {chatMessages.map((msg, i) => {
+          const isStreamingThis = isStreaming && i === chatMessages.length - 1 && msg.role === "assistant";
+          return (
           <motion.div
             key={msg.id}
             initial={{ opacity: 0, y: 8 }}
@@ -274,12 +307,19 @@ export function ChatPanel({ notebookId }: Props) {
               >
                 {msg.role === "assistant" ? (
                   msg.content ? (
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      className="prose prose-sm max-w-none dark:prose-invert prose-headings:text-[var(--text-primary)] prose-p:text-[var(--text-primary)] prose-strong:text-[var(--text-primary)] prose-code:text-[var(--brand-primary)] prose-code:bg-[var(--surface-2)] prose-code:rounded prose-code:px-1"
-                    >
-                      {msg.content}
-                    </ReactMarkdown>
+                    isStreamingThis ? (
+                      // During streaming: cheap plain-text renderer + fade-in chunks + cursor.
+                      // Switching to ReactMarkdown only after the stream is done avoids
+                      // running the markdown parser hundreds of times per second.
+                      <StreamingBubble content={msg.content} />
+                    ) : (
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        className="prose prose-sm max-w-none dark:prose-invert prose-headings:text-[var(--text-primary)] prose-p:text-[var(--text-primary)] prose-strong:text-[var(--text-primary)] prose-code:text-[var(--brand-primary)] prose-code:bg-[var(--surface-2)] prose-code:rounded prose-code:px-1"
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
+                    )
                   ) : (
                     <TypingIndicator />
                   )
@@ -296,7 +336,7 @@ export function ChatPanel({ notebookId }: Props) {
                   <>
                     <span className="text-[var(--text-muted)]">·</span>
                     <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-1">
-                      <Zap className="w-2.5 h-2.5" />{TOKEN_COSTS.chat} tokens
+                      <Zap className="w-2.5 h-2.5" />{chatCost} tokens
                     </span>
                     <button
                       onClick={() => copyText(msg.content)}
@@ -328,7 +368,8 @@ export function ChatPanel({ notebookId }: Props) {
               </div>
             )}
           </motion.div>
-        ))}
+        );
+        })}
 
         <div ref={bottomRef} />
       </div>
@@ -347,7 +388,7 @@ export function ChatPanel({ notebookId }: Props) {
           />
           <div className="flex items-center gap-2 shrink-0 pb-0.5">
             <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-0.5">
-              <Zap className="w-2.5 h-2.5" />{TOKEN_COSTS.chat}
+              <Zap className="w-2.5 h-2.5" />{chatCost}
             </span>
             <button
               onClick={handleSend}

@@ -82,20 +82,27 @@ function SignInForm({ onSwitch }: { onSwitch: (t: Tab) => void }) {
   const { signIn, signInWithGoogle, isLoading } = useAuth();
   const navigate  = useNavigate();
   const location  = useLocation();
-  const [email, setEmail] = useState("");
+  const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading,  setLoading]  = useState(false);
   const [gLoading, setGLoading] = useState(false);
+  const [formError, setFormError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
     setLoading(true);
     try {
       await signIn(email, password);
       const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? getLastPath();
       navigate(from, { replace: true });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Sign in failed");
+      const msg = err instanceof Error ? err.message : "";
+      const isCredentialError =
+        msg.toLowerCase().includes("invalid login") ||
+        msg.toLowerCase().includes("invalid credentials") ||
+        msg.toLowerCase().includes("email not confirmed") === false && msg.toLowerCase().includes("invalid");
+      setFormError(isCredentialError ? "Wrong email or password." : (msg || "Sign in failed"));
     } finally {
       setLoading(false);
     }
@@ -123,7 +130,19 @@ function SignInForm({ onSwitch }: { onSwitch: (t: Tab) => void }) {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Field label="Email" type="email" value={email} onChange={setEmail} placeholder="you@university.edu" required />
-        <Field label="Password" type="password" value={password} onChange={setPassword} placeholder="••••••••" required showToggle />
+        <Field
+          label="Password"
+          type="password"
+          value={password}
+          onChange={(v) => { setPassword(v); if (formError) setFormError(""); }}
+          placeholder="••••••••"
+          required
+          showToggle
+        />
+
+        {formError && (
+          <p className="text-sm text-brand-danger text-center -mt-1">{formError}</p>
+        )}
 
         <button
           type="button"
@@ -150,6 +169,7 @@ function SignInForm({ onSwitch }: { onSwitch: (t: Tab) => void }) {
 
 function SignUpForm({ onSwitch }: { onSwitch: (t: Tab) => void }) {
   const { signUp, signInWithGoogle } = useAuth();
+  const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
   const [email,    setEmail]    = useState("");
   const [uni,      setUni]      = useState("");
@@ -172,8 +192,12 @@ function SignUpForm({ onSwitch }: { onSwitch: (t: Tab) => void }) {
     if (!validate()) return;
     setLoading(true);
     try {
-      await signUp(email, password, fullName, uni || undefined);
-      onSwitch("check-email");
+      const { sessionAvailable } = await signUp(email, password, fullName, uni || undefined);
+      if (sessionAvailable) {
+        navigate("/dashboard", { replace: true });
+      } else {
+        onSwitch("check-email");
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Sign up failed");
     } finally {

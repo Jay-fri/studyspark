@@ -1,7 +1,9 @@
+import { useEffect, useRef } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Toaster } from "react-hot-toast";
 import { useTheme } from "@/hooks/useTheme";
+import { useNotebooks } from "@/hooks/useNotebook";
 import { Sidebar } from "./Sidebar";
 import { Navbar } from "./Navbar";
 import { MobileNav } from "./MobileNav";
@@ -13,12 +15,22 @@ import { CommandPalette } from "@/components/ui/CommandPalette";
 
 export function AppShell() {
   useTheme();
+  useNotebooks(); // Keep notebook store populated on every page, not just /notebooks/:id
+
   const location = useLocation();
   const routeKey = location.pathname.split("/")[1] ?? "/";
+  const mainRef  = useRef<HTMLElement>(null);
 
   // /notebooks/:id pages manage their own layout (tab bar replaces navbar on mobile)
   const segments       = location.pathname.split("/").filter(Boolean);
   const isNotebookView = segments[0] === "notebooks" && segments.length > 1;
+
+  // Scroll the main content area back to the top on every route change
+  useEffect(() => {
+    if (!isNotebookView && mainRef.current) {
+      mainRef.current.scrollTo({ top: 0, behavior: "instant" });
+    }
+  }, [location.pathname, isNotebookView]);
 
   return (
     <div className="flex h-dvh overflow-hidden bg-surface-0">
@@ -37,7 +49,7 @@ export function AppShell() {
         </div>
 
         {/* Page content with transition */}
-        <main className={
+        <main ref={mainRef} className={
           isNotebookView
             ? "flex-1 overflow-hidden relative"
             : "flex-1 overflow-y-auto scrollbar-thin relative"
@@ -46,7 +58,7 @@ export function AppShell() {
             paddingBottom: "calc(5rem + env(safe-area-inset-bottom, 0px))"
           } : undefined}
         >
-          <AnimatePresence mode="popLayout" initial={false}>
+          <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={routeKey}
               initial={{ opacity: 0 }}

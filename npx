@@ -1,0 +1,36 @@
+[93mWARNING:[0m Docker is not running
+[93mWARNING:[0m Docker is not running
+Deploying Function: generate-upload-url
+Deploying Function: generate-upload-url
+Uploading asset (generate-upload-url): supabase/functions/generate-upload-url/index.ts
+Uploading asset (generate-upload-url): supabase/functions/generate-upload-url/index.ts
+Uploading asset (generate-upload-url): supabase/functions/_shared/cors.ts
+Uploading asset (generate-upload-url): supabase/functions/_shared/cors.ts
+Deploying Function: verify-payment
+Deploying Function: verify-payment
+Uploading asset (verify-payment): supabase/functions/verify-payment/index.ts
+Uploading asset (verify-payment): supabase/functions/verify-payment/index.ts
+Uploading asset (verify-payment): supabase/functions/_shared/cors.ts
+Uploading asset (verify-payment): supabase/functions/_shared/cors.ts
+Deploying Function: supabase
+Deploying Function: supabase
+WARN: failed to read file: open supabase/functions/supabase/index.ts: no such file or directory
+WARN: failed to read file: open supabase/functions/supabase/index.ts: no such file or directory
+Deploying Function: functions
+Deploying Function: functions
+WARN: failed to read file: open supabase/functions/functions/index.ts: no such file or directory
+WARN: failed to read file: open supabase/functions/functions/index.ts: no such file or directory
+github.com/supabase/cli/pkg@v1.0.0/function/deploy.go:127 (0x104d84f98)
+github.com/supabase/cli/pkg@v1.0.0/function/deploy.go:77 (0x104d84a3c)
+github.com/supabase/cli/pkg@v1.0.0/queue/queue.go:43 (0x104d80ab0)
+runtime/asm_arm64.s:1268 (0x104716d14)
+
+github.com/supabase/cli/pkg@v1.0.0/function/deploy.go:127 (0x104d84f98)
+github.com/supabase/cli/pkg@v1.0.0/function/deploy.go:77 (0x104d84a3c)
+github.com/supabase/cli/pkg@v1.0.0/queue/queue.go:43 (0x104d80ab0)
+runtime/asm_arm64.s:1268 (0x104716d14)
+
+[91munexpected deploy status 400: {"message":"Entrypoint path does not exist - /tmp/user_fn_yguqquyvuflcmlhwdzal_67670cfa-cccd-456a-8744-8eb4fa4ebb01_1/source/supabase/functions/supabase/index.ts"}[0m
+Try rerunning the command with --debug to troubleshoot the error.
+[91munexpected deploy status 400: {"message":"Entrypoint path does not exist - /tmp/user_fn_yguqquyvuflcmlhwdzal_67670cfa-cccd-456a-8744-8eb4fa4ebb01_1/source/supabase/functions/supabase/index.ts"}[0m
+Try rerunning the command with --debug to troubleshoot the error.

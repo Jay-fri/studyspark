@@ -56,7 +56,10 @@ export const useNotebookStore = create<NotebookState>()((set, get) => ({
   addNotebook:       (nb)               => set((s) => ({ notebooks: [nb, ...s.notebooks] })),
   updateNotebook:    (nb)               => set((s) => ({ notebooks: s.notebooks.map((n) => n.id === nb.id ? nb : n) })),
   removeNotebook:    (id)               => set((s) => ({ notebooks: s.notebooks.filter((n) => n.id !== id) })),
-  setActiveNotebook: (activeNotebook)   => set({ activeNotebook, sources: [], aiOutputs: [], chatMessages: [], selectedSourceIds: "all", activeOutputType: null, starterQuestions: [] }),
+  // Don't clear sources/aiOutputs here — the query hooks overwrite them when data
+  // arrives. Clearing them caused a race: effect A populated sources from cache, then
+  // effect C (this) cleared them, and effect A never re-ran (same query.data ref).
+  setActiveNotebook: (activeNotebook)   => set({ activeNotebook, chatMessages: [], selectedSourceIds: "all", activeOutputType: null, starterQuestions: [] }),
 
   setSources:   (sources)  => set({ sources }),
   addSource:    (source)   => set((s) => ({ sources: [source, ...s.sources] })),

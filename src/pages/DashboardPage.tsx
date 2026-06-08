@@ -85,6 +85,7 @@ export default function DashboardPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ai_outputs").select("*")
+        .eq("user_id", userId!)
         .order("updated_at", { ascending: false }).limit(6);
       if (error) throw error;
       return (data ?? []) as AIOutput[];
@@ -109,7 +110,7 @@ export default function DashboardPage() {
     queryKey: ["flashcard-outputs-srs", userId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("ai_outputs").select("*").eq("type", "flashcards");
+        .from("ai_outputs").select("*").eq("user_id", userId!).eq("type", "flashcards");
       if (error) throw error;
       return (data ?? []) as AIOutput[];
     },

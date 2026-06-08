@@ -52,6 +52,7 @@ export default function LibraryPage() {
       const { data, error } = await supabase
         .from("ai_outputs")
         .select("*")
+        .eq("user_id", userId!)
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as AIOutput[];

@@ -1,4 +1,5 @@
 import { supabase } from "@/services/supabase";
+import { sampleDocument } from "@/lib/documentChunker";
 import type {
   AIOutputType,
   AIOutputContent,
@@ -32,6 +33,27 @@ async function getEdgeHeaders(): Promise<HeadersInit> {
     "apikey":       import.meta.env.VITE_SUPABASE_ANON_KEY,
     Authorization:  `Bearer ${session?.access_token ?? ""}`,
   };
+}
+
+/** Retry an async fn up to maxAttempts times, halving context on each failure. */
+async function withRetry<T>(
+  fn: (contextSlice: (text: string) => string) => Promise<T>,
+  maxAttempts = 3
+): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const fraction = 1 - attempt * 0.25; // 100% → 75% → 50%
+    try {
+      return await fn((text) => sampleDocument(text, Math.floor(8000 * fraction)));
+    } catch (err) {
+      lastErr = err;
+      const msg = (err as Error).message ?? "";
+      // Only retry on context-size or generic AI errors; propagate abort/rate-limit
+      if (msg === "__RATE_LIMITED__" || msg.includes("AbortError")) throw err;
+      if (attempt < maxAttempts - 1) await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+    }
+  }
+  throw lastErr;
 }
 
 /** Strip markdown code fences before JSON.parse */
@@ -147,39 +169,75 @@ export async function generateSummary(sourceText: string, signal?: AbortSignal):
   return groqComplete(
     [
       { role: "system", content: "You are an expert academic summariser. Create a clear, well-structured summary in markdown. Use: ## Overview (2 paragraphs), ## Key Points (bullet list), ## Important Terms (markdown table: Term | Definition), ## Conclusion. Be thorough but concise." },
-      { role: "user",   content: `Summarise the following study material:\n\n${sourceText.slice(0, 12000)}` },
+      { role: "user",   content: `Summarise the following study material:\n\n${sampleDocument(sourceText, 12000)}` },
     ],
     GROQ_MODELS.powerful, false, signal
   );
 }
 
-export async function generateQuiz(sourceText: string, count = 10, signal?: AbortSignal): Promise<QuizQuestion[]> {
-  const raw = await groqComplete(
-    [
-      { role: "system", content: `Generate exactly ${count} multiple-choice questions as JSON. Each question must have 4 distinct options. Use this exact format: {"questions":[{"id":"1","question":"...","options":["option A","option B","option C","option D"],"correct_index":0,"explanation":"why this answer is correct"}]}` },
-      { role: "user",   content: `Source text:\n\n${sourceText.slice(0, 12000)}` },
-    ],
-    GROQ_MODELS.fast, true, signal
-  );
-  return safeParseJSON<{ questions: QuizQuestion[] }>(raw).questions;
+const QUIZ_DIFFICULTY_PROMPT: Record<string, string> = {
+  easy:   "Generate straightforward recall and definition questions. Focus on basic facts, key terms, and direct information from the text.",
+  medium: "Generate questions requiring comprehension and application. Students should need to understand concepts, not just recall them.",
+  hard:   "Generate challenging analytical and critical thinking questions. Require deep understanding, inference, and synthesis of ideas.",
+  mixed:  "Generate a balanced mix: roughly 30% easy recall, 40% medium comprehension, and 30% hard analytical questions. Include a `\"difficulty\":\"easy\"|\"medium\"|\"hard\"` field on each question.",
+};
+
+const FLASHCARD_DIFFICULTY_PROMPT: Record<string, string> = {
+  easy:   "Focus on basic terms, key definitions, and straightforward facts. Each front should be a clear term; each back a concise definition. Set difficulty: \"easy\" on all cards.",
+  medium: "Focus on intermediate concepts that require some understanding. Mix term definitions with short-answer concept questions. Set difficulty: \"medium\" on all cards.",
+  hard:   "Focus on complex relationships, applications, and synthesis. Fronts should pose analytical questions; backs should provide thorough explanations. Set difficulty: \"hard\" on all cards.",
+  mixed:  "Generate a balanced mix of easy (basic terms), medium (concepts), and hard (analytical) cards. Set the `difficulty` field on each card to \"easy\", \"medium\", or \"hard\" accordingly.",
+};
+
+export async function generateQuiz(
+  sourceText: string,
+  count = 10,
+  difficulty: "easy" | "medium" | "hard" | "mixed" = "mixed",
+  signal?: AbortSignal
+): Promise<QuizQuestion[]> {
+  const difficultyInstruction = QUIZ_DIFFICULTY_PROMPT[difficulty];
+  return withRetry(async (sample) => {
+    const raw = await groqComplete(
+      [
+        {
+          role: "system",
+          content: `Generate exactly ${count} multiple-choice questions as JSON. Each question must have 4 distinct options.\n\nDifficulty instruction: ${difficultyInstruction}\n\nFormat: {"questions":[{"id":"1","question":"...","options":["A","B","C","D"],"correct_index":0,"explanation":"why correct","difficulty":"easy|medium|hard"}]}`,
+        },
+        { role: "user", content: `Source text:\n\n${sample(sourceText)}` },
+      ],
+      GROQ_MODELS.fast, true, signal
+    );
+    return safeParseJSON<{ questions: QuizQuestion[] }>(raw).questions;
+  });
 }
 
-export async function generateFlashcards(sourceText: string, count = 20, signal?: AbortSignal): Promise<Flashcard[]> {
-  const raw = await groqComplete(
-    [
-      { role: "system", content: `Generate exactly ${count} flashcards as JSON. Format: {"cards":[{"id":"1","front":"term or question","back":"definition or answer","difficulty":"easy|medium|hard"}]}` },
-      { role: "user",   content: `Source text:\n\n${sourceText.slice(0, 12000)}` },
-    ],
-    GROQ_MODELS.fast, true, signal
-  );
-  return safeParseJSON<{ cards: Flashcard[] }>(raw).cards;
+export async function generateFlashcards(
+  sourceText: string,
+  count = 20,
+  difficulty: "easy" | "medium" | "hard" | "mixed" = "mixed",
+  signal?: AbortSignal
+): Promise<Flashcard[]> {
+  const difficultyInstruction = FLASHCARD_DIFFICULTY_PROMPT[difficulty];
+  return withRetry(async (sample) => {
+    const raw = await groqComplete(
+      [
+        {
+          role: "system",
+          content: `Generate exactly ${count} flashcards as JSON.\n\nDifficulty instruction: ${difficultyInstruction}\n\nFormat: {"cards":[{"id":"1","front":"term or question","back":"definition or answer","difficulty":"easy|medium|hard"}]}`,
+        },
+        { role: "user", content: `Source text:\n\n${sample(sourceText)}` },
+      ],
+      GROQ_MODELS.fast, true, signal
+    );
+    return safeParseJSON<{ cards: Flashcard[] }>(raw).cards;
+  });
 }
 
 export async function generateMindMap(sourceText: string, signal?: AbortSignal): Promise<MindMapNode> {
   const raw = await groqComplete(
     [
       { role: "system", content: `Create a hierarchical mind map as JSON. Keep it 3 levels deep max (root → topics → subtopics). Format: {"root":{"id":"root","label":"Main Topic","children":[{"id":"t1","label":"Topic 1","children":[{"id":"t1a","label":"Subtopic"}]}]}}` },
-      { role: "user",   content: sourceText.slice(0, 8000) },
+      { role: "user",   content: sampleDocument(sourceText, 8000) },
     ],
     GROQ_MODELS.powerful, true, signal
   );
@@ -190,7 +248,7 @@ export async function generateStudyGuide(sourceText: string, signal?: AbortSigna
   const raw = await groqComplete(
     [
       { role: "system", content: `Create a comprehensive study guide as JSON. Format: {"sections":[{"heading":"Study Objectives","body":"...","bullets":["..."]},{"heading":"Core Concepts","body":"...","bullets":["..."]},{"heading":"Practice Questions","body":"...","bullets":["Q1: ..."]}]}. Include 5-8 sections.` },
-      { role: "user",   content: sourceText.slice(0, 12000) },
+      { role: "user",   content: sampleDocument(sourceText, 12000) },
     ],
     GROQ_MODELS.powerful, true, signal
   );
@@ -201,7 +259,7 @@ export async function generateKeyConcepts(sourceText: string, signal?: AbortSign
   const raw = await groqComplete(
     [
       { role: "system", content: `Extract 10-15 key concepts as JSON. Format: {"concepts":[{"term":"...","definition":"clear, concise definition","importance":"high|medium|low","example":"a real-world example"}]}. Mark the most critical concepts as high importance.` },
-      { role: "user",   content: sourceText.slice(0, 12000) },
+      { role: "user",   content: sampleDocument(sourceText, 12000) },
     ],
     GROQ_MODELS.fast, true, signal
   );
@@ -212,7 +270,7 @@ export async function generatePodcast(sourceText: string, signal?: AbortSignal):
   return groqComplete(
     [
       { role: "system", content: "Write an engaging study podcast script as a dialogue between two hosts: Alex and Jamie. They explain the material conversationally, ask each other questions, and use relatable analogies. Format every line as 'Alex: ...' or 'Jamie: ...'. Aim for 15-20 exchanges. Start with a brief introduction." },
-      { role: "user",   content: `Study material:\n\n${sourceText.slice(0, 10000)}` },
+      { role: "user",   content: `Study material:\n\n${sampleDocument(sourceText, 10000)}` },
     ],
     GROQ_MODELS.powerful, false, signal
   );
@@ -222,7 +280,7 @@ export async function generateStarterQuestions(sourceText: string, signal?: Abor
   const raw = await groqComplete(
     [
       { role: "system", content: `Generate 5 insightful study questions a student should ask about this material. Mix conceptual and practical questions. Return JSON: {"questions":["...","...","...","...","..."]}` },
-      { role: "user",   content: sourceText.slice(0, 4000) },
+      { role: "user",   content: sampleDocument(sourceText, 4000) },
     ],
     GROQ_MODELS.fast, true, signal
   );
@@ -238,12 +296,13 @@ export async function generateStarterQuestions(sourceText: string, signal?: Abor
 export async function generateAIOutput(
   type:       AIOutputType,
   sourceText: string,
-  signal?:    AbortSignal
+  signal?:    AbortSignal,
+  options?:   { difficulty?: "easy" | "medium" | "hard" | "mixed"; count?: number }
 ): Promise<AIOutputContent> {
   switch (type) {
     case "summary":    return { type: "summary",     text:      await generateSummary(sourceText, signal) };
-    case "quiz":       return { type: "quiz",        questions: await generateQuiz(sourceText, 10, signal) };
-    case "flashcards": return { type: "flashcards",  cards:     await generateFlashcards(sourceText, 20, signal) };
+    case "quiz":       return { type: "quiz",        questions: await generateQuiz(sourceText, options?.count ?? 10, options?.difficulty ?? "mixed", signal) };
+    case "flashcards": return { type: "flashcards",  cards:     await generateFlashcards(sourceText, options?.count ?? 20, options?.difficulty ?? "mixed", signal) };
     case "keyconcepts":return { type: "keyconcepts", concepts:  await generateKeyConcepts(sourceText, signal) };
     case "studyguide": return { type: "studyguide",  sections:  await generateStudyGuide(sourceText, signal) };
     case "mindmap":    return { type: "mindmap",     root:      await generateMindMap(sourceText, signal) };

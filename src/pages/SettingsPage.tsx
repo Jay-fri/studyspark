@@ -394,6 +394,7 @@ function TokensTab() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("token_transactions").select("*")
+        .eq("user_id", profile!.id)
         .order("created_at", { ascending: false }).limit(50);
       if (error) throw error;
       return (data ?? []) as TokenTransaction[];
@@ -494,9 +495,9 @@ function DataTab() {
     if (!profile) return;
     setExporting(true);
     const [nbRes, aoRes, srcRes] = await Promise.all([
-      supabase.from("notebooks").select("*"),
-      supabase.from("ai_outputs").select("id, notebook_id, type, tokens_used, created_at, updated_at"),
-      supabase.from("sources").select("id, notebook_id, title, type, word_count, created_at"),
+      supabase.from("notebooks").select("*").eq("user_id", profile.id),
+      supabase.from("ai_outputs").select("id, notebook_id, type, tokens_used, created_at, updated_at").eq("user_id", profile.id),
+      supabase.from("sources").select("id, notebook_id, title, type, word_count, created_at").eq("user_id", profile.id),
     ]);
     setExporting(false);
 

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import { Loader2, Zap, RefreshCw, ChevronRight, ChevronLeft } from "lucide-react";
-import { TOKEN_COSTS } from "@/lib/tokenCounter";
+import { useTokenCosts } from "@/hooks/useTokenCosts";
 import { cn } from "@/lib/utils";
 import type { AIOutput, AIOutputType } from "@/types";
 
@@ -38,6 +38,7 @@ export function StudioPanel({
   collapsed, onCollapse,
 }: Props) {
   const [hoveredType, setHoveredType] = useState<AIOutputType | null>(null);
+  const costs = useTokenCosts();
 
   const getOutput = (type: AIOutputType) => outputs.find((o) => o.type === type) ?? null;
 
@@ -121,7 +122,7 @@ export function StudioPanel({
             {STUDIO_ITEMS.map(({ type, label, icon, desc }) => {
               const output   = getOutput(type);
               const isThis   = isGenerating && generatingType === type;
-              const cost     = TOKEN_COSTS[type as keyof typeof TOKEN_COSTS];
+              const cost     = costs[type as keyof typeof costs];
               const noTokens = balance === 0;
 
               return (

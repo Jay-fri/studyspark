@@ -11,12 +11,13 @@ import { useNotebooks, useNotebookSources, useAIGenerate, useAIOutputs } from "@
 import { SourcePanel }  from "@/components/notebook/SourcePanel";
 import { ChatPanel }    from "@/components/notebook/ChatPanel";
 import { StudioPanel }  from "@/components/notebook/StudioPanel";
-import { OutputModal }  from "@/components/notebook/OutputModal";
-import { UploadModal }  from "@/components/notebook/UploadModal";
+import { OutputModal }             from "@/components/notebook/OutputModal";
+import { UploadModal }             from "@/components/notebook/UploadModal";
+import { GenerationOptionsModal }  from "@/components/notebook/GenerationOptionsModal";
 import { useAuthStore } from "@/stores/authStore";
 import { useUIStore }   from "@/stores/uiStore";
 import { cn }           from "@/lib/utils";
-import type { AIOutputType } from "@/types";
+import type { AIOutputType, GenerationOptions } from "@/types";
 
 // ── Desktop resize handle ────────────────────────────────────────────────────
 function ResizeHandle() {
@@ -72,6 +73,7 @@ export default function NotebookPage() {
 
   const [sourcesCollapsed, setSourcesCollapsed] = useState(false);
   const [studioCollapsed,  setStudioCollapsed]  = useState(false);
+  const [optionsType, setOptionsType] = useState<"quiz" | "flashcards" | null>(null);
 
   const sourcesPanelRef = useRef<PanelImperativeHandle | null>(null);
   const studioPanelRef  = useRef<PanelImperativeHandle | null>(null);
@@ -132,9 +134,9 @@ export default function NotebookPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aiOutputs]);
 
-  const handleGenerate = useCallback(async (type: AIOutputType) => {
+  const runGenerate = useCallback(async (type: AIOutputType, options?: GenerationOptions) => {
     try {
-      await generate(type);
+      await generate(type, options);
       toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} generated!`);
     } catch (err: unknown) {
       const msg = (err as Error).message ?? "Generation failed";
@@ -145,6 +147,21 @@ export default function NotebookPage() {
       }
     }
   }, [generate]);
+
+  const handleGenerate = useCallback((type: AIOutputType) => {
+    if (type === "quiz" || type === "flashcards") {
+      setOptionsType(type);
+    } else {
+      runGenerate(type);
+    }
+  }, [runGenerate]);
+
+  const handleOptionsConfirm = useCallback((options: GenerationOptions) => {
+    if (!optionsType) return;
+    const type = optionsType;
+    setOptionsType(null);
+    runGenerate(type, options);
+  }, [optionsType, runGenerate]);
 
   const handleOpen = useCallback((type: AIOutputType) => {
     _setModalType(type);
@@ -339,6 +356,13 @@ export default function NotebookPage() {
           />
         )}
       </AnimatePresence>
+
+      {/* Generation options modal (quiz / flashcards) */}
+      <GenerationOptionsModal
+        type={optionsType}
+        onConfirm={handleOptionsConfirm}
+        onClose={() => setOptionsType(null)}
+      />
     </div>
   );
 }

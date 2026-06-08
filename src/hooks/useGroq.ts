@@ -1,15 +1,17 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { groqStream } from "@/services/groq";
 import { useNotebookStore } from "@/stores/notebookStore";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/services/supabase";
 import { useTokens } from "./useTokens";
-import { buildContext } from "@/lib/documentChunker";
+import { buildContextFromChunks } from "@/lib/documentChunker";
 import { generateId } from "@/lib/utils";
 import type { ChatMessage } from "@/types";
 
 export function useGroq() {
   const [isStreaming, setIsStreaming] = useState(false);
+  const rafRef      = useRef<number | null>(null);
+  const pendingRef  = useRef("");
   const {
     sources,
     selectedSourceIds,
@@ -50,8 +52,23 @@ export function useGroq() {
       try {
         await spend("chat");
 
-        // Use buildContext with selected sources (max 6000 tokens for chat context)
-        const context = buildContext(sources, selectedSourceIds, 6000);
+        // Fetch chunks for selected sources, fall back to source.content for legacy sources
+        const activeSources =
+          selectedSourceIds === "all"
+            ? sources
+            : sources.filter((s) => (selectedSourceIds as string[]).includes(s.id));
+
+        let rawChunks: { source_id: string; chunk_index: number; content: string }[] = [];
+        if (activeSources.length > 0) {
+          const { data } = await supabase
+            .from("source_chunks")
+            .select("source_id, chunk_index, content")
+            .in("source_id", activeSources.map((s) => s.id))
+            .order("chunk_index", { ascending: true });
+          rawChunks = data ?? [];
+        }
+
+        const context = buildContextFromChunks(rawChunks, sources, selectedSourceIds, 6000);
         const history = chatMessages.slice(-8).map((m) => ({ role: m.role, content: m.content }));
 
         const messages = [
@@ -66,10 +83,28 @@ export function useGroq() {
         ];
 
         let fullContent = "";
+
+        // Buffer chunks and flush to Zustand once per animation frame (≤60fps).
+        // This prevents ReactMarkdown from re-parsing markdown on every tiny chunk,
+        // giving smooth rendering without hundreds of re-renders per second.
+        const flushPending = () => {
+          const toAppend = pendingRef.current;
+          pendingRef.current = "";
+          rafRef.current = null;
+          if (toAppend) appendToLastMessage(toAppend);
+        };
+
         for await (const chunk of groqStream(messages)) {
-          appendToLastMessage(chunk);
-          fullContent += chunk;
+          fullContent      += chunk;
+          pendingRef.current += chunk;
+          if (!rafRef.current) {
+            rafRef.current = requestAnimationFrame(flushPending);
+          }
         }
+
+        // Flush any remaining buffered text after the stream ends
+        if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+        if (pendingRef.current) { appendToLastMessage(pendingRef.current); pendingRef.current = ""; }
 
         // Persist completed assistant message
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

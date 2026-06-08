@@ -22,11 +22,12 @@ interface Props {
 
 function ProgressBar({ p }: { p: UploadProgress }) {
   const stageLabel: Record<UploadProgress["stage"], string> = {
-    extracting: "Extracting text…",
-    uploading:  "Uploading file…",
-    saving:     "Saving to notebook…",
-    done:       "Done!",
-    error:      p.error ?? "Error",
+    extracting:  "Extracting text…",
+    uploading:   "Uploading to R2…",
+    saving:      "Saving metadata…",
+    processing:  "Chunking document…",
+    done:        "Done!",
+    error:       p.error ?? "Error",
   };
 
   return (

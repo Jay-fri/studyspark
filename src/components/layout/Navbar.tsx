@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
+import { useNotebookStore } from "@/stores/notebookStore";
 import { supabase } from "@/services/supabase";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
 
@@ -40,12 +41,28 @@ const ROUTE_LABELS: Record<string, string> = {
 };
 
 function useBreadcrumb() {
-  const { pathname } = useLocation();
-  const segments = pathname.split("/").filter(Boolean);
-  return segments.map((seg) => ({
-    label: ROUTE_LABELS[seg] ?? seg.charAt(0).toUpperCase() + seg.slice(1),
-    href:  "/" + seg,
-  }));
+  const { pathname }     = useLocation();
+  const segments         = pathname.split("/").filter(Boolean);
+  const activeNotebook   = useNotebookStore((s) => s.activeNotebook);
+  const notebooks        = useNotebookStore((s) => s.notebooks);
+
+  return segments.map((seg, i) => {
+    const href = "/" + segments.slice(0, i + 1).join("/");
+    let label  = ROUTE_LABELS[seg];
+
+    if (!label) {
+      // Resolve notebook ID to its title
+      if (i > 0 && segments[i - 1] === "notebooks") {
+        const nb = (activeNotebook?.id === seg ? activeNotebook : null)
+          ?? notebooks.find((n) => n.id === seg);
+        label = nb ? `${nb.emoji ? nb.emoji + " " : ""}${nb.title}` : "Notebook";
+      } else {
+        label = seg.charAt(0).toUpperCase() + seg.slice(1);
+      }
+    }
+
+    return { label, href };
+  });
 }
 
 const MOBILE_NAV = [

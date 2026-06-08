@@ -24,6 +24,7 @@ export default function StudyReviewPage() {
       const { data, error } = await supabase
         .from("ai_outputs")
         .select("*, notebooks(title, emoji)")
+        .eq("user_id", userId!)
         .eq("type", "flashcards");
       if (error) throw error;
       return (data ?? []) as AIOutput[];

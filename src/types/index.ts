@@ -31,9 +31,26 @@ export interface Source {
   user_id: string;
   title: string;
   type: "pdf" | "docx" | "txt" | "md" | "url" | "text";
+  /** Null for file-type sources processed through the R2 pipeline (text lives in source_chunks). */
   content: string | null;
   file_url: string | null;
+  file_path: string | null;
+  processing_status: "pending" | "processing" | "ready" | "error";
+  error_message: string | null;
   word_count: number | null;
+  chunk_count: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SourceChunk {
+  id: string;
+  source_id: string;
+  notebook_id: string;
+  user_id: string;
+  chunk_index: number;
+  content: string;
+  token_count: number;
   created_at: string;
 }
 
@@ -91,12 +108,18 @@ export interface Payment {
 
 // ─── AI Content types ──────────────────────────────────────────────────────
 
+export interface GenerationOptions {
+  difficulty: "easy" | "medium" | "hard" | "mixed";
+  count: number;
+}
+
 export interface QuizQuestion {
   id: string;
   question: string;
   options: string[];
   correct_index: number;
   explanation: string;
+  difficulty?: "easy" | "medium" | "hard";
 }
 
 export interface Flashcard {
@@ -144,6 +167,7 @@ export interface Database {
       profiles:           { Row: Profile;          Insert: Partial<Profile>;          Update: Partial<Profile>           };
       notebooks:          { Row: Notebook;         Insert: Partial<Notebook>;         Update: Partial<Notebook>          };
       sources:            { Row: Source;           Insert: Partial<Source>;           Update: Partial<Source>            };
+      source_chunks:      { Row: SourceChunk;     Insert: Partial<SourceChunk>;     Update: Partial<SourceChunk>       };
       ai_outputs:         { Row: AIOutput;         Insert: Partial<AIOutput>;         Update: Partial<AIOutput>          };
       chat_messages:      { Row: ChatMessage;      Insert: Partial<ChatMessage>;      Update: Partial<ChatMessage>       };
       token_transactions: { Row: TokenTransaction; Insert: Partial<TokenTransaction>; Update: Partial<TokenTransaction>  };

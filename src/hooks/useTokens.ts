@@ -3,18 +3,20 @@ import { useAuthStore } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
 import { deductTokens, supabase } from "@/services/supabase";
 import { getCost, canAfford, type OperationType } from "@/lib/tokenCounter";
+import { useTokenCosts } from "./useTokenCosts";
 
 export function useTokens() {
   const { profile, refreshProfile } = useAuthStore();
   const setPaymentModalOpen = useUIStore((s) => s.setPaymentModalOpen);
+  const liveCosts = useTokenCosts();
 
   const balance = profile?.study_tokens ?? 0;
 
   const spend = useCallback(
     async (op: OperationType, description?: string): Promise<number> => {
       if (!profile) throw new Error("Not authenticated");
-      const cost = getCost(op);
-      if (!canAfford(balance, op)) {
+      const cost = getCost(op, liveCosts);
+      if (!canAfford(balance, op, liveCosts)) {
         throw new Error(`Insufficient tokens. Need ${cost}, have ${balance}.`);
       }
       const newBalance = await deductTokens(
@@ -22,7 +24,6 @@ export function useTokens() {
         cost,
         description ?? `AI ${op}`
       );
-      // Refresh profile so the UI balance is up-to-date
       const { data } = await supabase
         .from("profiles")
         .select("*")
@@ -31,15 +32,14 @@ export function useTokens() {
       if (data) refreshProfile(data);
       return newBalance;
     },
-    [profile, balance, refreshProfile]
+    [profile, balance, liveCosts, refreshProfile]
   );
 
   const canUse = useCallback(
-    (op: OperationType) => canAfford(balance, op),
-    [balance]
+    (op: OperationType) => canAfford(balance, op, liveCosts),
+    [balance, liveCosts]
   );
 
-  /** Returns true if the user has enough tokens; otherwise opens the payment modal and returns false. */
   const requireTokens = useCallback(
     (amount: number): boolean => {
       if (balance >= amount) return true;
@@ -49,5 +49,10 @@ export function useTokens() {
     [balance, setPaymentModalOpen]
   );
 
-  return { balance, spend, canUse, requireTokens, getCost };
+  const getCostLive = useCallback(
+    (op: OperationType) => getCost(op, liveCosts),
+    [liveCosts]
+  );
+
+  return { balance, spend, canUse, requireTokens, getCost: getCostLive, liveCosts };
 }

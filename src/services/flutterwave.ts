@@ -19,7 +19,7 @@ interface FlutterwaveConfig {
   customizations: {
     title:       string;
     description: string;
-    logo:        string;
+    logo?:       string;
   };
   meta: {
     user_id: string;
@@ -76,7 +76,6 @@ export async function initializePayment(
     customizations: {
       title:       "StudyLM Token Top-up",
       description: "Purchase study tokens",
-      logo:        `${window.location.origin}/logo.jpg`,
     },
     meta:     { user_id: profile.id, tokens },
     callback: onSuccess,

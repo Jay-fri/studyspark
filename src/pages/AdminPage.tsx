@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { subDays, format, startOfDay, parseISO } from "date-fns";
@@ -10,7 +10,7 @@ import {
   LayoutDashboard, Users, CreditCard, BarChart2, Megaphone, Cpu,
   Zap, Search, Gift, BookOpen, ShieldCheck, ShieldOff, UserCog,
   PlusCircle, Loader2, AlertTriangle, Check, X,
-  TrendingUp, TrendingDown, Trash2, ToggleLeft, ToggleRight,
+  TrendingUp, TrendingDown, Trash2, ToggleLeft, ToggleRight, SlidersHorizontal,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { supabase }      from "@/services/supabase";
@@ -20,15 +20,16 @@ import type { Profile, Payment, Announcement } from "@/types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-type AdminTab = "overview" | "users" | "payments" | "analytics" | "announcements" | "groq";
+type AdminTab = "overview" | "users" | "payments" | "analytics" | "announcements" | "groq" | "token-costs";
 
 const TABS: { id: AdminTab; label: string; icon: React.ElementType }[] = [
-  { id: "overview",      label: "Overview",      icon: LayoutDashboard },
-  { id: "users",         label: "Users",         icon: Users           },
-  { id: "payments",      label: "Payments",      icon: CreditCard      },
-  { id: "analytics",     label: "Analytics",     icon: BarChart2       },
-  { id: "announcements", label: "Announcements", icon: Megaphone       },
-  { id: "groq",          label: "Groq Monitor",  icon: Cpu             },
+  { id: "overview",      label: "Overview",      icon: LayoutDashboard    },
+  { id: "users",         label: "Users",         icon: Users              },
+  { id: "payments",      label: "Payments",      icon: CreditCard         },
+  { id: "analytics",     label: "Analytics",     icon: BarChart2          },
+  { id: "announcements", label: "Announcements", icon: Megaphone          },
+  { id: "token-costs",   label: "Token Costs",   icon: SlidersHorizontal  },
+  { id: "groq",          label: "Groq Monitor",  icon: Cpu                },
 ];
 
 const CHART_COLORS = ["#E07B1A","#6366F1","#10B981","#F59E0B","#EF4444","#8B5CF6","#06B6D4"];
@@ -750,6 +751,123 @@ function AnnouncementsTab() {
   );
 }
 
+// ─── Token Costs Tab ──────────────────────────────────────────────────────────
+
+const COST_FIELDS: { key: string; label: string; desc: string }[] = [
+  { key: "summary",     label: "Summary",      desc: "AI summary of sources" },
+  { key: "quiz",        label: "Quiz",         desc: "Generated quiz questions" },
+  { key: "flashcards",  label: "Flashcards",   desc: "Flashcard deck" },
+  { key: "mindmap",     label: "Mind Map",     desc: "Visual concept map" },
+  { key: "studyguide",  label: "Study Guide",  desc: "Comprehensive study guide" },
+  { key: "keyconcepts", label: "Key Concepts", desc: "Key concept extraction" },
+  { key: "podcast",     label: "Podcast",      desc: "Podcast-style script" },
+  { key: "chat",        label: "Chat (per msg)", desc: "Each AI chat message" },
+];
+
+function TokenCostsTab() {
+  const qc = useQueryClient();
+  const adminProfile = useAuthStore((s) => s.profile);
+
+  const { data: saved, isLoading } = useQuery<Record<string, number>>({
+    queryKey: ["app-settings", "token_costs"],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("app_settings")
+        .select("value")
+        .eq("id", "token_costs")
+        .single();
+      return (data?.value ?? {}) as Record<string, number>;
+    },
+    staleTime: 0,
+  });
+
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  // Populate draft when data loads
+  useEffect(() => {
+    if (saved) {
+      setDraft(Object.fromEntries(Object.entries(saved).map(([k, v]) => [k, String(v)])));
+    }
+  }, [saved]);
+
+  const handleSave = async () => {
+    const parsed: Record<string, number> = {};
+    for (const { key } of COST_FIELDS) {
+      const n = parseInt(draft[key] ?? "");
+      if (isNaN(n) || n < 0) { toast.error(`Invalid value for ${key}`); return; }
+      parsed[key] = n;
+    }
+    setSaving(true);
+    const { error } = await (supabase as any)
+      .from("app_settings")
+      .upsert({ id: "token_costs", value: parsed, updated_at: new Date().toISOString() });
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Token costs updated");
+    // Invalidate so useTokenCosts() everywhere refreshes immediately
+    qc.invalidateQueries({ queryKey: ["app-settings", "token_costs"] });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" />
+      </div>
+    );
+  }
+
+  const hasChanges = saved && COST_FIELDS.some(
+    ({ key }) => draft[key] !== undefined && parseInt(draft[key]) !== saved[key]
+  );
+
+  return (
+    <div className="max-w-lg space-y-4">
+      <div className="bg-[var(--surface-1)] border border-[var(--border)] rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-[var(--border)]">
+          <p className="text-sm font-semibold text-[var(--text-primary)]">Token cost per operation</p>
+          <p className="text-xs text-[var(--text-muted)] mt-0.5">Changes take effect immediately for all users.</p>
+        </div>
+        <div className="divide-y divide-[var(--border)]">
+          {COST_FIELDS.map(({ key, label, desc }) => (
+            <div key={key} className="flex items-center gap-4 px-5 py-3.5">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-[var(--text-primary)]">{label}</p>
+                <p className="text-[11px] text-[var(--text-muted)]">{desc}</p>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <input
+                  type="number"
+                  min="0"
+                  value={draft[key] ?? ""}
+                  onChange={(e) => setDraft((d) => ({ ...d, [key]: e.target.value }))}
+                  className="w-20 px-2.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface-0)] text-[var(--text-primary)] text-sm text-right focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)]"
+                />
+                <span className="text-xs text-[var(--text-muted)] w-10">tokens</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="px-5 py-4 border-t border-[var(--border)] flex items-center justify-between gap-3">
+          {hasChanges ? (
+            <p className="text-xs text-[var(--brand-warning)]">Unsaved changes</p>
+          ) : (
+            <p className="text-xs text-[var(--text-muted)]">All changes saved</p>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={saving || !hasChanges}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl gradient-brand text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+          >
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+            Save costs
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Groq Monitor Tab ─────────────────────────────────────────────────────────
 
 function GroqMonitorTab() {
@@ -902,6 +1020,7 @@ export default function AdminPage() {
           {tab === "payments"      && <PaymentsTab />}
           {tab === "analytics"     && <AnalyticsTab />}
           {tab === "announcements" && <AnnouncementsTab />}
+          {tab === "token-costs"   && <TokenCostsTab />}
           {tab === "groq"          && <GroqMonitorTab />}
         </motion.div>
       </AnimatePresence>

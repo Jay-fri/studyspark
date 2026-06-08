@@ -1,4 +1,4 @@
-import type { Source } from "@/types";
+import type { Source, SourceChunk } from "@/types";
 
 export interface Chunk {
   index:   number;
@@ -73,6 +73,83 @@ export function buildContext(
   );
 
   return trimmed.join("\n\n---\n\n");
+}
+
+/**
+ * Samples from beginning (50%), middle (30%), and end (20%) of a document
+ * so large files get broad coverage instead of a front-biased hard truncation.
+ */
+export function sampleDocument(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  const start  = Math.floor(maxChars * 0.5);
+  const mid    = Math.floor(maxChars * 0.3);
+  const end    = maxChars - start - mid;
+  const midPos = Math.floor(text.length / 2) - Math.floor(mid / 2);
+  return (
+    text.slice(0, start) +
+    "\n\n[…middle section…]\n\n" +
+    text.slice(midPos, midPos + mid) +
+    "\n\n[…end section…]\n\n" +
+    text.slice(text.length - end)
+  );
+}
+
+/**
+ * Builds AI context from source_chunks rows fetched on-demand from Supabase.
+ *
+ * Strategy:
+ * - For sources that have chunks: walk chunks in order until budget is exhausted.
+ * - For old sources without chunks: fall back to source.content (legacy behaviour).
+ *
+ * This means the pipeline is fully backward-compatible — existing sources
+ * with content stored directly in Postgres still work until they are re-processed.
+ */
+export function buildContextFromChunks(
+  chunks: Pick<SourceChunk, "source_id" | "chunk_index" | "content">[],
+  sources: Source[],
+  selectedIds: string[] | "all",
+  maxTokens = 8000,
+): string {
+  const activeIds =
+    selectedIds === "all"
+      ? sources.map((s) => s.id)
+      : (selectedIds as string[]);
+
+  const maxChars = maxTokens * 4;
+  const parts: string[] = [];
+  let totalChars = 0;
+
+  for (const sourceId of activeIds) {
+    if (totalChars >= maxChars) break;
+    const source = sources.find((s) => s.id === sourceId);
+    if (!source) continue;
+
+    const header = `[SOURCE: ${source.title}]`;
+    const sourceChunks = chunks
+      .filter((c) => c.source_id === sourceId)
+      .sort((a, b) => a.chunk_index - b.chunk_index);
+
+    if (sourceChunks.length > 0) {
+      // R2 pipeline path: use chunks
+      let first = true;
+      for (const chunk of sourceChunks) {
+        if (totalChars >= maxChars) break;
+        const text = first ? `${header}\n${chunk.content}` : chunk.content;
+        first = false;
+        const toAdd = text.slice(0, maxChars - totalChars);
+        parts.push(toAdd);
+        totalChars += toAdd.length;
+      }
+    } else if (source.content) {
+      // Legacy fallback: content stored directly in the sources row
+      const budget  = maxChars - totalChars;
+      const sampled = sampleDocument(source.content, budget);
+      parts.push(`${header}\n${sampled}`);
+      totalChars += header.length + sampled.length;
+    }
+  }
+
+  return parts.join("\n\n---\n\n");
 }
 
 /** Token estimate: ~4 chars per token */

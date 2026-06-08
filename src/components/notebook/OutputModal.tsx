@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, RefreshCw, Loader2, Zap } from "lucide-react";
 import { OutputViewer } from "./OutputViewer";
-import { TOKEN_COSTS } from "@/lib/tokenCounter";
+import { useTokenCosts } from "@/hooks/useTokenCosts";
 import { cn } from "@/lib/utils";
 import type { AIOutput, AIOutputType } from "@/types";
 
@@ -42,19 +42,20 @@ export function OutputModal({
     return () => window.removeEventListener("keydown", fn);
   }, [open, onClose]);
 
+  const costs = useTokenCosts();
   const meta = type ? TYPE_META[type] : null;
-  const cost = type ? TOKEN_COSTS[type as keyof typeof TOKEN_COSTS] : null;
+  const cost = type ? costs[type as keyof typeof costs] : null;
   const isMindMap = type === "mindmap";
 
   return (
     <AnimatePresence>
       {open && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop — pointer-events disabled immediately on exit so it doesn't swallow clicks */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            exit={{ opacity: 0, pointerEvents: "none" }}
             transition={{ duration: 0.18 }}
             className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
             onClick={onClose}

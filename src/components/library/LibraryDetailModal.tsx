@@ -66,12 +66,12 @@ export function LibraryDetailModal({ output, notebook, onClose }: Props) {
     <AnimatePresence>
       {output && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop — pointer-events disabled immediately on exit so it doesn't swallow clicks */}
           <motion.div
             key="backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            exit={{ opacity: 0, pointerEvents: "none" }}
             className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
             onClick={onClose}
           />
