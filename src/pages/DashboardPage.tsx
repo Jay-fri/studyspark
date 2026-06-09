@@ -119,7 +119,6 @@ export default function DashboardPage() {
   const userId = profile?.id;
   const balance = profile?.study_tokens ?? 0;
   const max = 1000;
-  const pct = Math.min((balance / max) * 100, 100);
   const firstName = profile?.full_name?.split(" ")[0] ?? "there";
   const initials = (profile?.full_name ?? profile?.id ?? "S")[0].toUpperCase();
   const today = format(new Date(), "EEEE, MMMM d");
