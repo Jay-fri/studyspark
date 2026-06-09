@@ -6,26 +6,10 @@ const FONT_SIZE_MAP = { small: "13px", medium: "14px", large: "16px" } as const;
 export function useTheme() {
   const { theme, setTheme, density, fontSize } = useUIStore();
 
-  // Dark / light / system
+  // Always dark
   useEffect(() => {
-    const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else if (theme === "light") {
-      root.classList.remove("dark");
-    } else {
-      root.classList.toggle("dark", window.matchMedia("(prefers-color-scheme: dark)").matches);
-    }
-  }, [theme]);
-
-  useEffect(() => {
-    if (theme !== "system") return;
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = (e: MediaQueryListEvent) =>
-      document.documentElement.classList.toggle("dark", e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, [theme]);
+    document.documentElement.classList.add("dark");
+  }, []);
 
   // Density — data attribute drives CSS custom properties
   useEffect(() => {

@@ -9,22 +9,27 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: "auto",
-      includeAssets: ["favicon.svg", "apple-touch-icon.png"],
+      includeAssets: ["apple-touch-icon.png", "logo.jpg", "pwa-192x192.png", "pwa-512x512.png"],
       manifest: {
+        id:               "/",
         name:             "StudyLM — AI Study Assistant",
         short_name:       "StudyLM",
         description:      "AI-powered study assistant for university students. Upload notes, chat with AI, generate flashcards and quizzes.",
-        theme_color:      "#E07B1A",
-        background_color: "#FAFAFA",
+        theme_color:      "#0a1628",
+        background_color: "#0a1628",
         display:          "standalone",
+        display_override: ["standalone", "minimal-ui"],
         orientation:      "portrait",
         categories:       ["education", "productivity"],
         start_url:        "/",
         scope:            "/",
         icons: [
-          { src: "pwa-192x192.png", sizes: "192x192", type: "image/png"                    },
-          { src: "pwa-512x512.png", sizes: "512x512", type: "image/png"                    },
-          { src: "pwa-512x512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+          { src: "pwa-192x192.png", sizes: "192x192", type: "image/png", purpose: "any"      },
+          { src: "pwa-512x512.png", sizes: "512x512", type: "image/png", purpose: "any"      },
+          { src: "pwa-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+        ],
+        screenshots: [
+          { src: "pwa-512x512.png", sizes: "512x512", type: "image/png", form_factor: "narrow" },
         ],
       },
       workbox: {

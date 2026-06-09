@@ -1,13 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import {
   Menu,
   Search,
-  Sun,
-  Moon,
-  Monitor,
   Bell,
   ChevronRight,
   User,
@@ -73,31 +71,23 @@ const MOBILE_NAV = [
 ];
 
 export function Navbar() {
-  const { theme, setTheme, mobileDrawerOpen, setMobileDrawerOpen, setCommandPaletteOpen, setPaymentModalOpen } = useUIStore();
+  const { mobileDrawerOpen, setMobileDrawerOpen, setCommandPaletteOpen, setPaymentModalOpen } = useUIStore();
   const { user, profile, signOut: storeSignOut } = useAuthStore();
   const navigate   = useNavigate();
   const breadcrumb = useBreadcrumb();
 
   const [userMenuOpen, setUserMenuOpen]   = useState(false);
   const [bellOpen, setBellOpen]           = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
-  const bellRef     = useRef<HTMLDivElement>(null);
+  const [bellPos, setBellPos]             = useState<{ top: number; right: number } | null>(null);
+  const [userMenuPos, setUserMenuPos]     = useState<{ top: number; right: number } | null>(null);
+  const userMenuRef    = useRef<HTMLDivElement>(null);
+  const bellRef        = useRef<HTMLDivElement>(null);
+  const bellBtnRef     = useRef<HTMLButtonElement>(null);
+  const userMenuBtnRef = useRef<HTMLButtonElement>(null);
 
   const { announcements, readIds, unreadCount, markRead, markAllRead } = useAnnouncements();
 
-  // Close menus on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
-        setUserMenuOpen(false);
-      }
-      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
-        setBellOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  // Outside-click handling is done by the fixed inset-0 overlay in portals.
 
   const handleSignOut = async () => {
     setUserMenuOpen(false);
@@ -105,14 +95,6 @@ export function Navbar() {
     storeSignOut();
     navigate("/");
   };
-
-  const cycleTheme = () => {
-    const next = theme === "light" ? "dark" : theme === "dark" ? "system" : "light";
-    setTheme(next);
-  };
-
-  const ThemeIcon =
-    theme === "light" ? Sun : theme === "dark" ? Moon : Monitor;
 
   const initials = (profile?.full_name ?? user?.email ?? "S")[0].toUpperCase();
 
@@ -180,19 +162,17 @@ export function Navbar() {
             <Search className="w-4 h-4" />
           </button>
 
-          {/* Theme toggle */}
-          <button
-            onClick={cycleTheme}
-            className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-1 transition-colors"
-            title={`Theme: ${theme}`}
-          >
-            <ThemeIcon className="w-4 h-4" />
-          </button>
-
           {/* Notification bell */}
           <div ref={bellRef} className="relative">
             <button
-              onClick={() => setBellOpen((v) => !v)}
+              ref={bellBtnRef}
+              onClick={() => {
+                if (!bellOpen && bellBtnRef.current) {
+                  const r = bellBtnRef.current.getBoundingClientRect();
+                  setBellPos({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
+                }
+                setBellOpen((v) => !v);
+              }}
               className="relative p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-1 transition-colors"
             >
               <Bell className="w-4 h-4" />
@@ -202,69 +182,90 @@ export function Navbar() {
                 </span>
               )}
             </button>
-
-            <AnimatePresence>
-              {bellOpen && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: -8 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: -8 }}
-                  transition={{ duration: 0.12 }}
-                  className="absolute right-0 mt-2 w-80 bg-surface-0 border border-border rounded-xl shadow-lg overflow-hidden"
-                >
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                    <p className="text-sm font-semibold text-text-primary">Announcements</p>
-                    {unreadCount > 0 && (
-                      <button
-                        onClick={() => markAllRead.mutate()}
-                        className="flex items-center gap-1 text-[10px] text-[var(--brand-primary)] hover:underline"
-                      >
-                        <CheckCheck className="w-3 h-3" />
-                        Mark all read
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="max-h-72 overflow-y-auto">
-                    {announcements.length === 0 && (
-                      <p className="text-center text-xs text-text-muted py-8">No announcements</p>
-                    )}
-                    {announcements.map((ann) => {
-                      const isRead = readIds.includes(ann.id);
-                      return (
-                        <button
-                          key={ann.id}
-                          onClick={() => { if (!isRead) markRead.mutate(ann.id); }}
-                          className={cn(
-                            "w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-surface-1 transition-colors",
-                            !isRead && "bg-[var(--brand-primary)]/4"
-                          )}
-                        >
-                          <div className="flex items-start gap-2">
-                            {!isRead && (
-                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-primary)] mt-1.5 shrink-0" />
-                            )}
-                            <div className={cn("flex-1", isRead && "pl-3.5")}>
-                              <p className="text-xs font-semibold text-text-primary">{ann.title}</p>
-                              <p className="text-[11px] text-text-secondary mt-0.5 line-clamp-2">{ann.message}</p>
-                              <p className="text-[10px] text-text-muted mt-1">
-                                {format(new Date(ann.created_at), "MMM d, yyyy")}
-                              </p>
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
+
+          {/* Bell dropdown — portaled to body to escape overflow-hidden parents */}
+          {createPortal(
+            <AnimatePresence>
+              {bellOpen && bellPos && (
+                <>
+                  <div className="fixed inset-0 z-[190]" onClick={() => setBellOpen(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                    transition={{ duration: 0.12 }}
+                    style={{
+                      position: "fixed",
+                      top: bellPos.top,
+                      right: bellPos.right,
+                      width: Math.min(320, window.innerWidth - 16),
+                      zIndex: 200,
+                    }}
+                    className="bg-[#0c1b2e] border border-[rgba(255,255,255,0.1)] rounded-xl shadow-2xl overflow-hidden"
+                  >
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                      <p className="text-sm font-semibold text-text-primary">Announcements</p>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={() => markAllRead.mutate()}
+                          className="flex items-center gap-1 text-[10px] text-[var(--brand-primary)] hover:underline"
+                        >
+                          <CheckCheck className="w-3 h-3" />
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="max-h-72 overflow-y-auto">
+                      {announcements.length === 0 && (
+                        <p className="text-center text-xs text-text-muted py-8">No announcements</p>
+                      )}
+                      {announcements.map((ann) => {
+                        const isRead = readIds.includes(ann.id);
+                        return (
+                          <button
+                            key={ann.id}
+                            onClick={() => { if (!isRead) markRead.mutate(ann.id); }}
+                            className={cn(
+                              "w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-surface-1 transition-colors",
+                              !isRead && "bg-[var(--brand-primary)]/4"
+                            )}
+                          >
+                            <div className="flex items-start gap-2">
+                              {!isRead && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-primary)] mt-1.5 shrink-0" />
+                              )}
+                              <div className={cn("flex-1", isRead && "pl-3.5")}>
+                                <p className="text-xs font-semibold text-text-primary">{ann.title}</p>
+                                <p className="text-[11px] text-text-secondary mt-0.5 line-clamp-2">{ann.message}</p>
+                                <p className="text-[10px] text-text-muted mt-1">
+                                  {format(new Date(ann.created_at), "MMM d, yyyy")}
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>,
+            document.body
+          )}
 
           {/* User avatar + dropdown */}
           <div ref={userMenuRef} className="relative ml-1">
             <button
-              onClick={() => setUserMenuOpen((v) => !v)}
+              ref={userMenuBtnRef}
+              onClick={() => {
+                if (!userMenuOpen && userMenuBtnRef.current) {
+                  const r = userMenuBtnRef.current.getBoundingClientRect();
+                  setUserMenuPos({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
+                }
+                setUserMenuOpen((v) => !v);
+              }}
               className="flex items-center gap-2 p-1 rounded-xl hover:bg-surface-1 transition-colors"
             >
               {profile?.avatar_url ? (
@@ -287,53 +288,67 @@ export function Navbar() {
                 </div>
               )}
             </button>
-
-            <AnimatePresence>
-              {userMenuOpen && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: -8 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: -8 }}
-                  transition={{ duration: 0.12 }}
-                  className="absolute right-0 mt-2 w-56 bg-surface-0 border border-border rounded-xl shadow-lg py-1 overflow-hidden"
-                >
-                  {/* User info */}
-                  <div className="px-4 py-3 border-b border-border">
-                    <p className="text-sm font-semibold text-text-primary truncate">
-                      {profile?.full_name ?? "Student"}
-                    </p>
-                    <p className="text-xs text-text-muted truncate">{user?.email}</p>
-                  </div>
-
-                  {/* Menu items */}
-                  {[
-                    { icon: User,     label: "Profile",  href: "/settings" },
-                    { icon: Settings, label: "Settings", href: "/settings" },
-                  ].map((item) => (
-                    <Link
-                      key={item.href + item.label}
-                      to={item.href}
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-1 transition-colors"
-                    >
-                      <item.icon className="w-4 h-4" />
-                      {item.label}
-                    </Link>
-                  ))}
-
-                  <div className="border-t border-border mt-1" />
-
-                  <button
-                    onClick={handleSignOut}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-brand-danger hover:bg-brand-danger/10 transition-colors"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Sign Out
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
+
+          {/* User menu dropdown — portaled to body to escape overflow-hidden parents */}
+          {createPortal(
+            <AnimatePresence>
+              {userMenuOpen && userMenuPos && (
+                <>
+                  <div className="fixed inset-0 z-[190]" onClick={() => setUserMenuOpen(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                    transition={{ duration: 0.12 }}
+                    style={{
+                      position: "fixed",
+                      top: userMenuPos.top,
+                      right: userMenuPos.right,
+                      width: Math.min(224, window.innerWidth - 16),
+                      zIndex: 200,
+                    }}
+                    className="bg-[#0c1b2e] border border-[rgba(255,255,255,0.1)] rounded-xl shadow-2xl py-1 overflow-hidden"
+                  >
+                    {/* User info */}
+                    <div className="px-4 py-3 border-b border-border">
+                      <p className="text-sm font-semibold text-text-primary truncate">
+                        {profile?.full_name ?? "Student"}
+                      </p>
+                      <p className="text-xs text-text-muted truncate">{user?.email}</p>
+                    </div>
+
+                    {/* Menu items */}
+                    {[
+                      { icon: User,     label: "Profile",  href: "/settings" },
+                      { icon: Settings, label: "Settings", href: "/settings" },
+                    ].map((item) => (
+                      <Link
+                        key={item.href + item.label}
+                        to={item.href}
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-secondary hover:text-text-primary hover:bg-surface-1 transition-colors"
+                      >
+                        <item.icon className="w-4 h-4" />
+                        {item.label}
+                      </Link>
+                    ))}
+
+                    <div className="border-t border-border mt-1" />
+
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-brand-danger hover:bg-brand-danger/10 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign Out
+                    </button>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>,
+            document.body
+          )}
         </div>
       </header>
 

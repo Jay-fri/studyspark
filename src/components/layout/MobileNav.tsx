@@ -1,22 +1,29 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { LayoutDashboard, BookMarked, Library, User, Plus } from "lucide-react";
+import { LayoutDashboard, BookMarked, Library, User, Plus, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNotebookStore } from "@/stores/notebookStore";
+import { useAuthStore } from "@/stores/authStore";
 
-const tabs = [
-  { to: "/dashboard",      icon: LayoutDashboard, label: "Home",      isFab: false },
-  { to: "/notebooks",      icon: BookMarked,       label: "Notebooks", isFab: false },
-  { to: "/notebooks?create=1", icon: Plus,             label: "New",       isFab: true  },
-  { to: "/library",        icon: Library,          label: "Library",   isFab: false },
-  { to: "/settings",       icon: User,             label: "Profile",   isFab: false },
-] as const;
+type Tab = { to: string; icon: React.ElementType; label: string; isFab: boolean };
+
+const BASE_TABS: Tab[] = [
+  { to: "/dashboard",        icon: LayoutDashboard, label: "Home",      isFab: false },
+  { to: "/notebooks",        icon: BookMarked,      label: "Notebooks", isFab: false },
+  { to: "/notebooks?create=1", icon: Plus,          label: "New",       isFab: true  },
+  { to: "/library",          icon: Library,         label: "Library",   isFab: false },
+  { to: "/settings",         icon: User,            label: "Profile",   isFab: false },
+];
+
+const ADMIN_TAB: Tab = { to: "/admin", icon: Shield, label: "Admin", isFab: false };
 
 export function MobileNav() {
   const location  = useLocation();
   const aiOutputs = useNotebookStore((s) => s.aiOutputs);
+  const isAdmin   = useAuthStore((s) => s.isAdmin);
 
-  // Match active tab by pathname only (ignore query string for FAB tab)
+  const tabs = isAdmin ? [...BASE_TABS, ADMIN_TAB] : BASE_TABS;
+
   const activeIdx = tabs.findIndex((t) => {
     const tabPath = t.to.split("?")[0];
     return location.pathname.startsWith(tabPath) && !t.isFab;
@@ -32,7 +39,6 @@ export function MobileNav() {
       }}
     >
       <div className="relative flex h-[60px] safe-area-pb">
-        {/* Active background pill — skip FAB center tab */}
         {activeIdx !== -1 && (
           <ActivePill activeIdx={activeIdx} total={tabs.length} />
         )}
@@ -44,7 +50,7 @@ export function MobileNav() {
           if (isFab) {
             return (
               <NavLink
-                key={i}
+                key={to}
                 to={to}
                 className="flex-1 flex flex-col items-center justify-center gap-1 relative z-10"
               >
@@ -66,7 +72,7 @@ export function MobileNav() {
 
           return (
             <NavLink
-              key={i}
+              key={to}
               to={to}
               className={cn(
                 "flex-1 flex flex-col items-center justify-center gap-1 relative z-10 transition-colors",
@@ -89,15 +95,12 @@ export function MobileNav() {
 }
 
 function ActivePill({ activeIdx, total }: { activeIdx: number; total: number }) {
-  const width = `${100 / total}%`;
-  const left  = `${(activeIdx / total) * 100}%`;
-
   return (
     <motion.div
       className="absolute inset-y-1.5 rounded-xl"
       style={{
-        width,
-        left,
+        width: `${100 / total}%`,
+        left: `${(activeIdx / total) * 100}%`,
         background: "rgba(56,224,195,0.08)",
       }}
       layout

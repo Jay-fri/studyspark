@@ -4,7 +4,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
 import { useSRS } from "@/hooks/useSRS";
-import { ChevronRight, Search, Layers } from "lucide-react";
+import { ChevronRight, Layers } from "lucide-react";
 import { supabase } from "@/services/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { useNotebookStore } from "@/stores/notebookStore";
@@ -96,7 +96,7 @@ function TokenBar({ balance, max = 1000 }: { balance: number; max?: number }) {
 export default function DashboardPage() {
   const profile = useAuthStore((s) => s.profile);
   const notebooks = useNotebookStore((s) => s.notebooks);
-  const { setPaymentModalOpen, setCommandPaletteOpen } = useUIStore();
+  const { setPaymentModalOpen } = useUIStore();
   const { getDueCards } = useSRS();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -120,7 +120,6 @@ export default function DashboardPage() {
   const balance = profile?.study_tokens ?? 0;
   const max = 1000;
   const firstName = profile?.full_name?.split(" ")[0] ?? "there";
-  const initials = (profile?.full_name ?? profile?.id ?? "S")[0].toUpperCase();
   const today = format(new Date(), "EEEE, MMMM d");
 
   const { data: recentOutputs = [] } = useQuery<AIOutput[]>({
@@ -195,43 +194,14 @@ export default function DashboardPage() {
   return (
     <div className="relative px-5 sm:px-6 lg:px-8 py-6 max-w-5xl mx-auto">
       <motion.div variants={stagger} initial="hidden" animate="show">
-        {/* ── Mobile top row — hidden on md+ since Navbar handles it ── */}
-        <motion.div
-          variants={fadeUp}
-          className="flex items-center justify-between mb-5 md:hidden">
-          <div>
-            <p
-              className="text-[15px] font-medium"
-              style={{ color: "var(--text-dim)" }}>
-              {today}
-            </p>
-            <h1
-              className="text-[30px] font-medium leading-tight mt-0.5"
-              style={{ color: "var(--text-primary)" }}>
-              {greeting(firstName)}
-            </h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCommandPaletteOpen(true)}
-              className="w-9 h-9 flex items-center justify-center rounded-xl transition-colors"
-              style={{
-                background: "var(--surface-2)",
-                border: "0.5px solid var(--border)",
-                color: "var(--text-muted)",
-              }}>
-              <Search className="w-4 h-4" />
-            </button>
-            <div
-              className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-              style={{
-                background: "rgba(56,224,195,0.15)",
-                border: "1px solid rgba(56,224,195,0.3)",
-                color: "var(--brand-primary)",
-              }}>
-              {initials}
-            </div>
-          </div>
+        {/* ── Mobile greeting — hidden on md+ since Navbar shows the breadcrumb there ── */}
+        <motion.div variants={fadeUp} className="mb-5 md:hidden">
+          <p className="text-[12px] font-medium" style={{ color: "var(--text-dim)" }}>{today}</p>
+          <h1
+            className="text-[28px] font-display leading-tight mt-0.5"
+            style={{ color: "var(--text-primary)" }}>
+            {greeting(firstName)}
+          </h1>
         </motion.div>
 
         {/* ── Mobile summary meta ── */}

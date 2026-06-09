@@ -117,16 +117,14 @@ export function AppShell() {
 
       {/* Main content area */}
       <div
-        className="relative flex flex-col flex-1 min-w-0 overflow-hidden"
+        className="relative flex flex-col flex-1 min-w-0 overflow-x-hidden"
         style={{ zIndex: 1 }}>
         {/* Network/token banners */}
         <OfflineBanner />
         <TokenBanner />
 
-        {/* Top navbar — always hidden on mobile (bottom nav handles mobile navigation) */}
-        <div className="hidden md:contents">
-          <Navbar />
-        </div>
+        {/* Top navbar */}
+        <Navbar />
 
         {/* Page content */}
         <main

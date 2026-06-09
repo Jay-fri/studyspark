@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
   User, Palette, Bell, Zap, Database,
-  Sun, Moon, Monitor, Camera, Loader2,
+  Camera, Loader2,
   TrendingUp, TrendingDown, Eye, EyeOff,
   AlertTriangle, Download, Trash2, Lock,
 } from "lucide-react";
@@ -264,35 +264,10 @@ function ProfileTab() {
 
 // ── Appearance Tab ─────────────────────────────────────────────────────────────
 function AppearanceTab() {
-  const { theme, setTheme, density, setDensity, fontSize, setFontSize } = useUIStore();
-
-  const themeOptions = [
-    { value: "light"  as const, label: "Light",  icon: Sun    },
-    { value: "dark"   as const, label: "Dark",   icon: Moon   },
-    { value: "system" as const, label: "System", icon: Monitor},
-  ];
+  const { density, setDensity, fontSize, setFontSize } = useUIStore();
 
   return (
     <div className="space-y-4">
-      <Section title="Theme">
-        <div className="grid grid-cols-3 gap-2">
-          {themeOptions.map(({ value, label, icon: Icon }) => (
-            <button
-              key={value}
-              onClick={() => setTheme(value)}
-              className={cn(
-                "flex flex-col items-center gap-2 p-4 rounded-xl border transition-all",
-                theme === value
-                  ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/5 text-[var(--brand-primary)]"
-                  : "border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)]"
-              )}
-            >
-              <Icon className="w-5 h-5" />
-              <span className="text-xs font-medium">{label}</span>
-            </button>
-          ))}
-        </div>
-      </Section>
 
       <Section title="Layout Density">
         <div className="grid grid-cols-2 gap-2">
