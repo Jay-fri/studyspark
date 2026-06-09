@@ -17,10 +17,12 @@ function ConceptCard({ concept }: { concept: KeyConcept }) {
   const styles = concept.importance ? IMPORTANCE_STYLES[concept.importance] : null;
 
   return (
-    <div
+    <motion.div
+      layout
       className="cursor-pointer"
       style={{ perspective: "600px" }}
       onClick={() => setFlipped((f) => !f)}
+      transition={{ layout: { duration: 0.2, ease: "easeInOut" } }}
     >
       <AnimatePresence mode="wait">
         <motion.div
@@ -30,7 +32,7 @@ function ConceptCard({ concept }: { concept: KeyConcept }) {
           exit={{ rotateY: flipped ? 90 : -90, opacity: 0 }}
           transition={{ duration: 0.18 }}
           className={[
-            "rounded-xl border p-4 h-36 flex flex-col justify-between",
+            "rounded-xl border p-4 flex flex-col gap-2 min-h-[100px]",
             flipped ? "bg-[var(--brand-primary)]/6 border-[var(--brand-primary)]/30" : "bg-[var(--surface-2)]",
             styles && !flipped ? styles.border : "border-[var(--border)]",
           ].join(" ")}
@@ -45,20 +47,20 @@ function ConceptCard({ concept }: { concept: KeyConcept }) {
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-[var(--text-muted)]">Click to see definition</p>
+              <p className="text-[11px] text-[var(--text-muted)] mt-auto">Tap to see definition</p>
             </>
           ) : (
             <>
-              <p className="text-xs text-[var(--text-secondary)] leading-relaxed flex-1">{concept.definition}</p>
+              <p className="text-xs text-[var(--text-secondary)] leading-relaxed">{concept.definition}</p>
               {concept.example && (
-                <p className="text-[10px] text-[var(--text-muted)] mt-2 italic">e.g. {concept.example}</p>
+                <p className="text-[10px] text-[var(--text-muted)] italic">e.g. {concept.example}</p>
               )}
-              <p className="text-[10px] text-[var(--text-muted)] mt-1">Click to go back</p>
+              <p className="text-[10px] text-[var(--text-muted)] mt-auto">Tap to go back</p>
             </>
           )}
         </motion.div>
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }
 

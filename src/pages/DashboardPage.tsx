@@ -234,6 +234,7 @@ export default function DashboardPage() {
         <motion.div variants={fadeUp} className="flex flex-wrap gap-2 mb-5">
           {/* Primary pill */}
           <Link
+            id="tour-new-notebook-btn"
             to="/notebooks"
             className="flex items-center gap-2 px-4 py-2 rounded-[9px] text-sm font-medium transition-all hover:-translate-y-px"
             style={{
@@ -305,6 +306,7 @@ export default function DashboardPage() {
         {/* ── Token card ── */}
         <motion.div variants={fadeUp} className="mb-3">
           <div
+            id="tour-token-badge-dashboard"
             className="rounded-xl px-5 py-4 flex items-center gap-4 dark:bg-[rgba(56,224,195,0.07)] dark:border dark:border-[rgba(56,224,195,0.22)]"
             style={{
               background: "var(--surface-1)",
@@ -431,15 +433,19 @@ export default function DashboardPage() {
             <>
               {/* Desktop grid */}
               <div className="hidden sm:grid grid-cols-3 gap-3">
-                {recentNotebooks.map((nb) => (
-                  <NotebookCard key={nb.id} nb={nb} />
+                {recentNotebooks.map((nb, i) => (
+                  <div key={nb.id} id={i === 0 ? "tour-notebook-card" : undefined}>
+                    <NotebookCard nb={nb} />
+                  </div>
                 ))}
               </div>
 
               {/* Mobile horizontal scroll */}
               <div className="flex gap-3 overflow-x-auto scrollbar-none -mx-5 px-5 pb-2 sm:hidden">
-                {recentNotebooks.map((nb) => (
-                  <NotebookCard key={nb.id} nb={nb} mobile />
+                {recentNotebooks.map((nb, i) => (
+                  <div key={nb.id} id={i === 0 ? "tour-notebook-card" : undefined}>
+                    <NotebookCard nb={nb} mobile />
+                  </div>
                 ))}
               </div>
             </>

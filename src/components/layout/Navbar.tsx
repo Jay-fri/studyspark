@@ -16,6 +16,9 @@ import {
   BookMarked,
   Library,
   CheckCheck,
+  Dna,
+  Shield,
+  MessageSquare,
 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/uiStore";
@@ -30,6 +33,7 @@ const ROUTE_LABELS: Record<string, string> = {
   notebooks: "Notebooks",
   library:   "Library",
   settings:  "Settings",
+  anatomy:   "Anatomy 3D",
   upload:    "Upload",
   chat:      "Chat",
   flashcards:"Flashcards",
@@ -64,15 +68,17 @@ function useBreadcrumb() {
 }
 
 const MOBILE_NAV = [
-  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard"  },
   { to: "/notebooks", icon: BookMarked,       label: "Notebooks"  },
-  { to: "/library",   icon: Library,           label: "Library"   },
-  { to: "/settings",  icon: Settings,          label: "Settings"  },
+  { to: "/library",   icon: Library,          label: "Library"    },
+  { to: "/anatomy",   icon: Dna,              label: "Anatomy 3D" },
+  { to: "/feedback",  icon: MessageSquare,    label: "Feedback"   },
+  { to: "/settings",  icon: Settings,         label: "Settings"   },
 ];
 
 export function Navbar() {
   const { mobileDrawerOpen, setMobileDrawerOpen, setCommandPaletteOpen, setPaymentModalOpen } = useUIStore();
-  const { user, profile, signOut: storeSignOut } = useAuthStore();
+  const { user, profile, isAdmin, signOut: storeSignOut } = useAuthStore();
   const navigate   = useNavigate();
   const breadcrumb = useBreadcrumb();
 
@@ -80,6 +86,7 @@ export function Navbar() {
   const [bellOpen, setBellOpen]           = useState(false);
   const [bellPos, setBellPos]             = useState<{ top: number; right: number } | null>(null);
   const [userMenuPos, setUserMenuPos]     = useState<{ top: number; right: number } | null>(null);
+  const [expandedNotifId, setExpandedNotifId] = useState<string | null>(null);
   const userMenuRef    = useRef<HTMLDivElement>(null);
   const bellRef        = useRef<HTMLDivElement>(null);
   const bellBtnRef     = useRef<HTMLButtonElement>(null);
@@ -169,9 +176,14 @@ export function Navbar() {
               onClick={() => {
                 if (!bellOpen && bellBtnRef.current) {
                   const r = bellBtnRef.current.getBoundingClientRect();
-                  setBellPos({ top: r.bottom + 8, right: Math.max(8, window.innerWidth - r.right) });
+                  const mobile = window.innerWidth < 640;
+                  setBellPos({
+                    top: r.bottom + 8,
+                    right: mobile ? 8 : Math.max(8, window.innerWidth - r.right),
+                  });
                 }
                 setBellOpen((v) => !v);
+                if (bellOpen) setExpandedNotifId(null);
               }}
               className="relative p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-1 transition-colors"
             >
@@ -199,7 +211,8 @@ export function Navbar() {
                       position: "fixed",
                       top: bellPos.top,
                       right: bellPos.right,
-                      width: Math.min(320, window.innerWidth - 16),
+                      left: window.innerWidth < 640 ? 8 : undefined,
+                      width: window.innerWidth < 640 ? undefined : Math.min(320, window.innerWidth - 16),
                       zIndex: 200,
                     }}
                     className="bg-[#0c1b2e] border border-[rgba(255,255,255,0.1)] rounded-xl shadow-2xl overflow-hidden"
@@ -223,10 +236,14 @@ export function Navbar() {
                       )}
                       {announcements.map((ann) => {
                         const isRead = readIds.includes(ann.id);
+                        const isExpanded = expandedNotifId === ann.id;
                         return (
                           <button
                             key={ann.id}
-                            onClick={() => { if (!isRead) markRead.mutate(ann.id); }}
+                            onClick={() => {
+                              if (!isRead) markRead.mutate(ann.id);
+                              setExpandedNotifId(isExpanded ? null : ann.id);
+                            }}
                             className={cn(
                               "w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-surface-1 transition-colors",
                               !isRead && "bg-[var(--brand-primary)]/4"
@@ -238,7 +255,12 @@ export function Navbar() {
                               )}
                               <div className={cn("flex-1", isRead && "pl-3.5")}>
                                 <p className="text-xs font-semibold text-text-primary">{ann.title}</p>
-                                <p className="text-[11px] text-text-secondary mt-0.5 line-clamp-2">{ann.message}</p>
+                                <p className={cn("text-[11px] text-text-secondary mt-0.5", !isExpanded && "line-clamp-2")}>
+                                  {ann.message}
+                                </p>
+                                {!isExpanded && ann.message.length > 80 && (
+                                  <p className="text-[10px] text-[var(--brand-primary)] mt-0.5">Tap to read more</p>
+                                )}
                                 <p className="text-[10px] text-text-muted mt-1">
                                   {format(new Date(ann.created_at), "MMM d, yyyy")}
                                 </p>
@@ -406,6 +428,16 @@ export function Navbar() {
                     {label}
                   </Link>
                 ))}
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    onClick={() => setMobileDrawerOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-1 transition-colors"
+                  >
+                    <Shield className="w-4 h-4" />
+                    Admin Panel
+                  </Link>
+                )}
               </nav>
 
               {/* Drawer token section */}

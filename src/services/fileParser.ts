@@ -1,8 +1,8 @@
 // Browser-based file text extraction for PDF, DOCX, TXT, MD
 
-// Vite bundles the worker as a static asset; the URL always matches the installed
-// pdfjs-dist version, eliminating "API version does not match Worker version" errors.
-import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+// Use the cdnjs CDN worker so Cloudflare Pages doesn't have to serve .mjs
+// with the correct MIME type (it doesn't, causing "worker failed" errors).
+const PDF_WORKER_CDN = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
 
 export async function extractTextFromFile(file: File): Promise<string> {
   const ext = file.name.split(".").pop()?.toLowerCase();
@@ -25,7 +25,7 @@ export async function extractTextFromFile(file: File): Promise<string> {
 async function extractFromPDF(file: File): Promise<string> {
   const { GlobalWorkerOptions, getDocument } = await import("pdfjs-dist");
 
-  GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+  GlobalWorkerOptions.workerSrc = PDF_WORKER_CDN;
 
   const buffer = await file.arrayBuffer();
   const pdf    = await getDocument({ data: buffer }).promise;

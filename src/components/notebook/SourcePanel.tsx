@@ -243,7 +243,7 @@ export function SourcePanel({ notebookId, collapsed, onCollapse }: Props) {
           </div>
 
           {/* Add Source */}
-          <div className="px-3 py-3 border-b border-border">
+          <div id="tour-upload-zone" className="px-3 py-3 border-b border-border">
             <button
               onClick={() => setShowUpload(true)}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-border text-sm font-medium text-text-secondary hover:border-brand-primary/40 hover:text-brand-primary hover:bg-brand-primary/5 transition-all"

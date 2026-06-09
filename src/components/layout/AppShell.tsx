@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
 import { Outlet, useLocation } from "react-router-dom";
+import { useTour } from "@/hooks/useTour";
 import { Toaster } from "react-hot-toast";
 import { useTheme } from "@/hooks/useTheme";
 import { useNotebooks } from "@/hooks/useNotebook";
+import { useAuthStore } from "@/stores/authStore";
 import { Sidebar } from "./Sidebar";
 import { Navbar } from "./Navbar";
 import { MobileNav } from "./MobileNav";
@@ -14,10 +16,23 @@ import { CommandPalette } from "@/components/ui/CommandPalette";
 
 export function AppShell() {
   useTheme();
-  useNotebooks(); // Keep notebook store populated on every page, not just /notebooks/:id
+  useNotebooks();
 
-  const location = useLocation();
-  const mainRef = useRef<HTMLElement>(null);
+  const location    = useLocation();
+  const mainRef     = useRef<HTMLElement>(null);
+  const tourFiredRef = useRef(false);
+  const profile     = useAuthStore((s) => s.profile);
+  const { startTour } = useTour();
+
+  // Auto-start tour exactly once per browser session for first-time users.
+  // tourFiredRef guards against profile updates re-triggering the effect.
+  useEffect(() => {
+    if (!profile || tourFiredRef.current) return;
+    if (localStorage.getItem("studyai_tour_complete")) return;
+    tourFiredRef.current = true;
+    const timer = setTimeout(() => startTour(), 1200);
+    return () => clearTimeout(timer);
+  }, [profile]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // /notebooks/:id pages manage their own layout (tab bar replaces navbar on mobile)
   const segments = location.pathname.split("/").filter(Boolean);

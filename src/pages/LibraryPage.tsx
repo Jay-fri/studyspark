@@ -236,7 +236,7 @@ export default function LibraryPage() {
 
         {/* ── Filter tabs + sort ────────────────────────────────────────────── */}
         {allOutputs.length > 0 && (
-          <div className="flex items-center gap-1 overflow-x-auto scrollbar-none -mb-px">
+          <div id="tour-library-filter" className="flex items-center gap-1 overflow-x-auto scrollbar-none -mb-px">
             {visibleTabs.map((key) => {
               const isActive = filter === key;
               const meta     = key !== "all" ? TYPE_META[key] : null;

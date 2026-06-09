@@ -129,7 +129,7 @@ export function LibraryDetailModal({ output, notebook, onClose }: Props) {
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto">
               <ContentRenderer content={output.content as AIOutputContent} />
             </div>
           </motion.div>

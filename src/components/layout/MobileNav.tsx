@@ -1,28 +1,24 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { LayoutDashboard, BookMarked, Library, User, Plus, Shield } from "@/lib/icons";
+import { LayoutDashboard, BookMarked, Library, User, Plus } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { useNotebookStore } from "@/stores/notebookStore";
-import { useAuthStore } from "@/stores/authStore";
 
-type Tab = { to: string; icon: React.ElementType; label: string; isFab: boolean };
+type Tab = { to: string; icon: React.ElementType; label: string; isFab: boolean; tourId?: string };
 
-const BASE_TABS: Tab[] = [
-  { to: "/dashboard",        icon: LayoutDashboard, label: "Home",      isFab: false },
-  { to: "/notebooks",        icon: BookMarked,      label: "Notebooks", isFab: false },
-  { to: "/notebooks?create=1", icon: Plus,          label: "New",       isFab: true  },
-  { to: "/library",          icon: Library,         label: "Library",   isFab: false },
-  { to: "/settings",         icon: User,            label: "Profile",   isFab: false },
+const TABS: Tab[] = [
+  { to: "/dashboard",          icon: LayoutDashboard, label: "Home",      isFab: false, tourId: "tour-nav-home"      },
+  { to: "/notebooks",          icon: BookMarked,      label: "Notebooks", isFab: false, tourId: "tour-nav-notebooks" },
+  { to: "/notebooks?create=1", icon: Plus,            label: "New",       isFab: true                               },
+  { to: "/library",            icon: Library,         label: "Library",   isFab: false, tourId: "tour-nav-library"   },
+  { to: "/settings",           icon: User,            label: "Profile",   isFab: false, tourId: "tour-nav-profile"   },
 ];
-
-const ADMIN_TAB: Tab = { to: "/admin", icon: Shield, label: "Admin", isFab: false };
 
 export function MobileNav() {
   const location  = useLocation();
   const aiOutputs = useNotebookStore((s) => s.aiOutputs);
-  const isAdmin   = useAuthStore((s) => s.isAdmin);
 
-  const tabs = isAdmin ? [...BASE_TABS, ADMIN_TAB] : BASE_TABS;
+  const tabs = TABS;
 
   const activeIdx = tabs.findIndex((t) => {
     const tabPath = t.to.split("?")[0];
@@ -38,12 +34,12 @@ export function MobileNav() {
         WebkitBackdropFilter: "blur(20px)",
       }}
     >
-      <div className="relative flex h-[60px] safe-area-pb">
+      <div className="relative flex h-[68px] safe-area-pb">
         {activeIdx !== -1 && (
           <ActivePill activeIdx={activeIdx} total={tabs.length} />
         )}
 
-        {tabs.map(({ to, icon: Icon, label, isFab }, i) => {
+        {tabs.map(({ to, icon: Icon, label, isFab, tourId }, i) => {
           const isActive    = activeIdx === i;
           const hasLibBadge = to.startsWith("/library") && aiOutputs.length > 0;
 
@@ -74,6 +70,7 @@ export function MobileNav() {
             <NavLink
               key={to}
               to={to}
+              id={tourId}
               className={cn(
                 "flex-1 flex flex-col items-center justify-center gap-1 relative z-10 transition-colors",
                 isActive ? "text-[#38E0C3]" : "text-text-muted hover:text-text-secondary"

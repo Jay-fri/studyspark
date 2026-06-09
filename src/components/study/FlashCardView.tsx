@@ -123,8 +123,8 @@ export function FlashCardView({ cards: initialCards, notebookTitle }: FlashCardV
         <span className="ml-3 text-[10px] hidden sm:inline">Space to flip · ← → navigate</span>
       </div>
 
-      {/* ── Card + nav — vertically stacked, card centered with nav 100px below ── */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-0 min-h-0">
+      {/* ── Card + nav — vertically centred, gap shrinks on mobile ── */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-6 sm:gap-0 min-h-0">
 
         {/* Card */}
         <div
@@ -139,7 +139,7 @@ export function FlashCardView({ cards: initialCards, notebookTitle }: FlashCardV
               animate={{ rotateY: 0, opacity: 1 }}
               exit={{ rotateY: flipped ? 90 : -90, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="rounded-2xl p-7 border min-h-[220px] flex flex-col gap-4"
+              className="rounded-2xl p-4 sm:p-7 border min-h-[160px] sm:min-h-[220px] flex flex-col gap-3 sm:gap-4"
               style={flipped
                 ? { transformStyle: "preserve-3d", background: "rgba(56,224,195,0.06)", borderColor: "rgba(56,224,195,0.25)" }
                 : { transformStyle: "preserve-3d", background: "var(--surface-2)", borderColor: "var(--border)" }
@@ -167,37 +167,37 @@ export function FlashCardView({ cards: initialCards, notebookTitle }: FlashCardV
           </AnimatePresence>
         </div>
 
-        {/* Nav buttons — 100px below card */}
-        <div className="flex gap-4 justify-center mt-[100px] shrink-0">
+        {/* Nav buttons */}
+        <div className="flex gap-4 justify-center sm:mt-[60px] shrink-0">
           <button
             onClick={prev}
             disabled={index === 0}
-            className="flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-2xl text-sm font-semibold transition-all disabled:opacity-30"
+            className="flex items-center justify-center gap-2 px-5 sm:px-7 py-3 sm:py-3.5 rounded-2xl text-sm font-semibold transition-all disabled:opacity-30"
             style={{
               background: "var(--surface-2)",
               border: "0.5px solid var(--border)",
               color: "var(--text-primary)",
-              minWidth: "120px",
+              minWidth: "100px",
             }}
             onMouseEnter={e => { if (!e.currentTarget.disabled) e.currentTarget.style.borderColor = "rgba(56,224,195,0.35)"; }}
             onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}
           >
-            <ChevronLeft className="w-5 h-5 shrink-0" />
+            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
             Prev
           </button>
           <button
             onClick={next}
             disabled={index >= filtered.length - 1}
-            className="flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-2xl text-sm font-semibold transition-all disabled:opacity-30"
+            className="flex items-center justify-center gap-2 px-5 sm:px-7 py-3 sm:py-3.5 rounded-2xl text-sm font-semibold transition-all disabled:opacity-30"
             style={{
               background: index >= filtered.length - 1 ? "var(--surface-2)" : "#38E0C3",
               border: "0.5px solid transparent",
               color: index >= filtered.length - 1 ? "var(--text-primary)" : "#0a1628",
-              minWidth: "120px",
+              minWidth: "100px",
             }}
           >
             Next
-            <ChevronRight className="w-5 h-5 shrink-0" />
+            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
           </button>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  LayoutDashboard, BookMarked, Library, Settings, Shield, LogOut, PanelLeftClose, PanelLeftOpen,
+  LayoutDashboard, BookMarked, Library, Settings, Shield, LogOut, PanelLeftClose, PanelLeftOpen, Dna, MessageSquare,
 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/uiStore";
@@ -9,10 +9,12 @@ import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/services/supabase";
 
 const NAV_ITEMS = [
-  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/notebooks", icon: BookMarked,       label: "Notebooks"  },
-  { to: "/library",   icon: Library,          label: "Library"    },
-  { to: "/settings",  icon: Settings,         label: "Settings"   },
+  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard",  tourId: "tour-sidebar-home"      },
+  { to: "/notebooks", icon: BookMarked,       label: "Notebooks",  tourId: "tour-sidebar-notebooks" },
+  { to: "/library",   icon: Library,          label: "Library",    tourId: "tour-sidebar-library"   },
+  { to: "/anatomy",   icon: Dna,              label: "Anatomy 3D", tourId: "tour-sidebar-anatomy"   },
+  { to: "/feedback",  icon: MessageSquare,    label: "Feedback",   tourId: "tour-sidebar-feedback"  },
+  { to: "/settings",  icon: Settings,         label: "Settings",   tourId: "tour-sidebar-settings"  },
 ] as const;
 
 function TokenDots({ balance, max = 1000 }: { balance: number; max?: number }) {
@@ -128,10 +130,11 @@ export function Sidebar() {
           </button>
         )}
 
-        {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
+        {NAV_ITEMS.map(({ to, icon: Icon, label, tourId }) => (
           <NavLink
             key={to}
             to={to}
+            id={tourId}
             title={sidebarCollapsed ? label : undefined}
             className="block relative group"
           >
@@ -214,6 +217,7 @@ export function Sidebar() {
 
       {/* ── Token indicator ───────────────────────────────────────────────── */}
       <div
+        id="tour-token-badge"
         className="shrink-0 px-4 py-3"
         style={{ borderTop: "0.5px solid var(--border-subtle)" }}
       >

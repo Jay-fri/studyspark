@@ -104,6 +104,12 @@ import {
   UserSettings01Icon,
   UserGroupIcon,
   Award01Icon as Award01IconAlias,
+  Dna01Icon,
+  MicroscopeIcon,
+  StethoscopeIcon,
+  HeartPulseIcon,
+  Bug01Icon,
+  BulbIcon,
 } from "@hugeicons/core-free-icons";
 import type { SVGProps } from "react";
 
@@ -220,3 +226,9 @@ export const TrendingDown       = hi(TrendingUpDownIcon);
 export const TrendingUp         = hi(TrendingUpDownIcon);
 export const UserCog            = hi(UserSettings01Icon);
 export const Users              = hi(UserGroupIcon);
+export const Dna                = hi(Dna01Icon);
+export const Microscope         = hi(MicroscopeIcon);
+export const Stethoscope        = hi(StethoscopeIcon);
+export const HeartPulse         = hi(HeartPulseIcon);
+export const Bug                = hi(Bug01Icon);
+export const Lightbulb          = hi(BulbIcon);

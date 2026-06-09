@@ -1,9 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
-const DISMISS_KEY  = "studylm-pwa-dismissed-at";
-const VISIT_KEY    = "studylm-pwa-visits";
-const DISMISS_TTL  = 7 * 24 * 60 * 60 * 1000;
-const PROMPT_DELAY = 30_000;
+const DISMISS_KEY = "studylm-pwa-dismissed-at";
+const DISMISS_TTL = 7 * 24 * 60 * 60 * 1000;
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -26,46 +24,45 @@ export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner]         = useState(false);
   const [platform]                          = useState(() => detectPlatform());
+  // Ref so timer callbacks always see the latest deferred prompt value
+  const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     if (platform.isStandalone) return;
 
-    const visits      = parseInt(localStorage.getItem(VISIT_KEY) ?? "0", 10) + 1;
-    localStorage.setItem(VISIT_KEY, String(visits));
-
     const dismissedAt = parseInt(localStorage.getItem(DISMISS_KEY) ?? "0", 10);
     if (Date.now() - dismissedAt < DISMISS_TTL) return;
 
+    const show = () => setShowBanner(true);
+
     const handlePrompt = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      const evt = e as BeforeInstallPromptEvent;
+      deferredPromptRef.current = evt;
+      setDeferredPrompt(evt);
+      // Show banner as soon as the browser signals the app is installable
+      setTimeout(show, 1500);
     };
+
     window.addEventListener("beforeinstallprompt", handlePrompt);
 
-    const show = () => setShowBanner(true);
-    const delay = visits >= 2 ? 2_000 : PROMPT_DELAY;
-    // On iOS we show even without deferredPrompt (no native event fires)
-    const timer = setTimeout(() => {
-      if (platform.isIOS || deferredPrompt) show();
-      else window.addEventListener("beforeinstallprompt", () => show(), { once: true });
-    }, delay);
-
-    // Fallback: show on iOS after delay regardless
-    const iosTimer = platform.isIOS ? setTimeout(show, delay) : null;
+    // iOS never fires beforeinstallprompt — show the manual instructions after a delay
+    const iosTimer = platform.isIOS ? setTimeout(show, 8_000) : null;
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handlePrompt);
-      clearTimeout(timer);
       if (iosTimer) clearTimeout(iosTimer);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const install = async () => {
-    if (!deferredPrompt) return;
-    await deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
+    const prompt = deferredPromptRef.current ?? deferredPrompt;
+    if (!prompt) return;
+    await prompt.prompt();
+    const { outcome } = await prompt.userChoice;
     if (outcome === "accepted") setShowBanner(false);
+    deferredPromptRef.current = null;
     setDeferredPrompt(null);
   };
 

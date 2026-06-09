@@ -26,6 +26,8 @@ const SettingsPage      = lazy(() => import("@/pages/SettingsPage"));
 const StudyReviewPage   = lazy(() => import("@/pages/StudyReviewPage"));
 const StudyModePage     = lazy(() => import("@/pages/StudyModePage"));
 const AdminPage         = lazy(() => import("@/pages/AdminPage"));
+const AnatomyPage       = lazy(() => import("@/pages/AnatomyPage"));
+const FeedbackPage      = lazy(() => import("@/pages/FeedbackPage"));
 const NotFoundPage           = lazy(() => import("@/pages/NotFoundPage"));
 const PaymentCallbackPage    = lazy(() => import("@/pages/PaymentCallbackPage"));
 
@@ -69,6 +71,8 @@ export default function App() {
                   <Route path="/quiz"              element={<QuizPage />} />
                   <Route path="/progress"          element={<ProgressPage />} />
                   <Route path="/settings"          element={<SettingsPage />} />
+                  <Route path="/anatomy"           element={<AnatomyPage />} />
+                  <Route path="/feedback"          element={<FeedbackPage />} />
                   <Route path="/study/review"      element={<StudyReviewPage />} />
                   <Route path="/study/:notebookId" element={<StudyModePage />} />
                 </Route>

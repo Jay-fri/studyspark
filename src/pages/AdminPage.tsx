@@ -11,6 +11,7 @@ import {
   Zap, Search, Gift, BookOpen, ShieldCheck, ShieldOff, UserCog,
   PlusCircle, Loader2, AlertTriangle, Check, X,
   TrendingUp, TrendingDown, Trash2, ToggleLeft, ToggleRight, SlidersHorizontal,
+  MessageSquare,
 } from "@/lib/icons";
 import toast from "react-hot-toast";
 import { supabase }      from "@/services/supabase";
@@ -20,7 +21,7 @@ import type { Profile, Payment, Announcement } from "@/types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-type AdminTab = "overview" | "users" | "payments" | "analytics" | "announcements" | "groq" | "token-costs";
+type AdminTab = "overview" | "users" | "payments" | "analytics" | "announcements" | "groq" | "token-costs" | "feedback";
 
 const TABS: { id: AdminTab; label: string; icon: React.ElementType }[] = [
   { id: "overview",      label: "Overview",      icon: LayoutDashboard    },
@@ -30,6 +31,7 @@ const TABS: { id: AdminTab; label: string; icon: React.ElementType }[] = [
   { id: "announcements", label: "Announcements", icon: Megaphone          },
   { id: "token-costs",   label: "Token Costs",   icon: SlidersHorizontal  },
   { id: "groq",          label: "Groq Monitor",  icon: Cpu                },
+  { id: "feedback",      label: "Feedback",      icon: MessageSquare      },
 ];
 
 const CHART_COLORS = ["#E07B1A","#6366F1","#10B981","#F59E0B","#EF4444","#8B5CF6","#06B6D4"];
@@ -967,6 +969,156 @@ function GroqMonitorTab() {
   );
 }
 
+// ─── Feedback Tab ─────────────────────────────────────────────────────────────
+
+const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+  open:      { label: "Open",      color: "#38E0C3",  bg: "rgba(56,224,195,0.1)"  },
+  reviewing: { label: "Reviewing", color: "#F59E0B",  bg: "rgba(245,158,11,0.1)"  },
+  resolved:  { label: "Resolved",  color: "rgba(255,255,255,0.35)", bg: "rgba(255,255,255,0.06)" },
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  bug:     "🐛 Bug Report",
+  feature: "💡 Feature Request",
+  general: "⭐ General",
+  other:   "💬 Other",
+};
+
+function FeedbackTab() {
+  const [filter, setFilter] = useState<"all" | "open" | "reviewing" | "resolved">("all");
+
+  const { data: rows = [], isLoading, refetch } = useQuery({
+    queryKey: ["admin-feedback", filter],
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let q = (supabase.from("user_feedback") as any)
+        .select("id, user_id, category, message, status, created_at")
+        .order("created_at", { ascending: false });
+      if (filter !== "all") q = q.eq("status", filter);
+      const { data, error } = await q;
+      if (error) throw error;
+
+      // Fetch display names separately from profiles
+      const userIds = [...new Set((data ?? []).map((r: any) => r.user_id))];
+      let nameMap: Record<string, string> = {};
+      if (userIds.length) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", userIds as string[]);
+        nameMap = Object.fromEntries(
+          (profiles ?? []).map((p: any) => [p.id, p.full_name ?? p.email ?? p.id])
+        );
+      }
+
+      return (data ?? []).map((r: any) => ({ ...r, display_name: nameMap[r.user_id] ?? "Unknown" }));
+    },
+    staleTime: 30_000,
+  });
+
+  const qc = useQueryClient();
+
+  const updateStatus = async (id: string, status: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from("user_feedback") as any)
+      .update({ status })
+      .eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ["admin-feedback"] });
+    refetch();
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Filter bar */}
+      <div className="flex gap-2 flex-wrap">
+        {(["all", "open", "reviewing", "resolved"] as const).map((s) => (
+          <button
+            key={s}
+            onClick={() => setFilter(s)}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors"
+            style={filter === s
+              ? { background: "rgba(56,224,195,0.12)", color: "#38E0C3", border: "0.5px solid rgba(56,224,195,0.25)" }
+              : { background: "var(--surface-1)", color: "var(--text-muted)", border: "0.5px solid var(--border)" }
+            }
+          >
+            {s === "all" ? "All" : STATUS_LABELS[s]?.label ?? s}
+          </button>
+        ))}
+      </div>
+
+      {isLoading && (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" />
+        </div>
+      )}
+
+      {!isLoading && rows.length === 0 && (
+        <div className="text-center py-16 text-sm text-[var(--text-muted)]">
+          No feedback found.
+        </div>
+      )}
+
+      {!isLoading && rows.length > 0 && (
+        <div className="space-y-3">
+          {rows.map((row: {
+            id: string;
+            category: string;
+            message: string;
+            status: string;
+            created_at: string;
+            profiles?: { full_name?: string };
+          }) => {
+            const st = STATUS_LABELS[row.status] ?? STATUS_LABELS.open;
+            return (
+              <div
+                key={row.id}
+                className="rounded-2xl p-4 sm:p-5 space-y-3"
+                style={{ background: "var(--surface-1)", border: "0.5px solid var(--border)" }}
+              >
+                {/* Top row */}
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-[var(--text-muted)]">
+                      {CATEGORY_LABELS[row.category] ?? row.category}
+                    </span>
+                    <span className="text-[10px] text-[var(--text-dim)]">
+                      {format(new Date(row.created_at), "MMM d, yyyy")}
+                    </span>
+                    {row.profiles?.full_name && (
+                      <span className="text-[10px] text-[var(--text-dim)]">
+                        — {row.profiles.full_name}
+                      </span>
+                    )}
+                  </div>
+                  {/* Status badge + picker */}
+                  <select
+                    value={row.status}
+                    onChange={(e) => updateStatus(row.id, e.target.value)}
+                    className="text-[11px] font-medium px-2.5 py-1 rounded-lg border-0 outline-none cursor-pointer"
+                    style={{ background: st.bg, color: st.color }}
+                  >
+                    {Object.entries(STATUS_LABELS).map(([val, { label }]) => (
+                      <option key={val} value={val} style={{ background: "var(--surface-0)", color: "var(--text-primary)" }}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Message */}
+                <p className="text-sm text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap">
+                  {row.message}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main AdminPage ────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
@@ -1021,6 +1173,7 @@ export default function AdminPage() {
           {tab === "announcements" && <AnnouncementsTab />}
           {tab === "token-costs"   && <TokenCostsTab />}
           {tab === "groq"          && <GroqMonitorTab />}
+          {tab === "feedback"      && <FeedbackTab />}
         </motion.div>
       </AnimatePresence>
     </div>

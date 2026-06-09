@@ -376,7 +376,7 @@ export function ChatPanel({ notebookId }: Props) {
       </div>
 
       {/* Input bar */}
-      <div className="px-4 py-3 border-t border-[var(--border)] bg-[var(--surface-0)]">
+      <div id="tour-chat-input" className="px-4 py-3 border-t border-[var(--border)] bg-[var(--surface-0)]">
         <div className="flex items-end gap-2 p-2 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] focus-within:border-[var(--brand-primary)] transition-colors">
           <textarea
             ref={textareaRef}

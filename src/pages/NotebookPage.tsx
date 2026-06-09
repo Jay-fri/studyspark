@@ -18,6 +18,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useUIStore }   from "@/stores/uiStore";
 import { cn }           from "@/lib/utils";
 import type { AIOutputType, GenerationOptions } from "@/types";
+import { activeTour }   from "@/hooks/useTour";
 
 // ── Desktop resize handle ────────────────────────────────────────────────────
 function ResizeHandle() {
@@ -222,7 +223,14 @@ export default function NotebookPage() {
         {MOBILE_TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
-            onClick={() => setMobileTab(id)}
+            id={id === "sources" ? "tour-sources-tab" : id === "chat" ? "tour-chat-tab" : "tour-study-tab"}
+            onClick={() => {
+              setMobileTab(id);
+              if (activeTour.pendingTab === id) {
+                activeTour.pendingTab = null;
+                setTimeout(activeTour.moveNext, 400);
+              }
+            }}
             className={cn(
               "relative flex-1 flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors",
               mobileTab === id

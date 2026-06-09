@@ -81,6 +81,11 @@ export function useAuth() {
         .from("profiles")
         .update({ university: university ?? null, full_name: fullName })
         .eq("id", data.user.id);
+
+      // Fire welcome email — best-effort, never block signup
+      supabase.functions.invoke("send-welcome-email", {
+        body: { email, name: fullName },
+      }).catch(() => {});
     }
 
     // If Supabase returns a session immediately (email confirmation disabled),

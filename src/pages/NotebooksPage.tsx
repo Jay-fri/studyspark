@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { activeTour } from "@/hooks/useTour";
 import {
   Plus, Loader2, X, Search,
   Pencil, Copy, Trash2, LayoutGrid, List, ImagePlus,
@@ -11,7 +12,6 @@ import { useNotebookStore } from "@/stores/notebookStore";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/services/supabase";
 import { format, formatDistanceToNow } from "date-fns";
-import { cn } from "@/lib/utils";
 import type { Notebook } from "@/types";
 import toast from "react-hot-toast";
 
@@ -173,7 +173,7 @@ function NotebookModal({
         <div className="relative shrink-0">
           {/* Background layer (image or tint) */}
           <div
-            className="h-[170px] w-full"
+            className="h-[110px] sm:h-[170px] w-full"
             style={coverUrl
               ? { backgroundImage: `url(${coverUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
               : { background: `linear-gradient(135deg, ${color}22 0%, ${color}08 100%)` }
@@ -181,7 +181,7 @@ function NotebookModal({
           />
           {/* Dark scrim on photo */}
           {coverUrl && (
-            <div className="absolute inset-0 h-[170px]" style={{ background: "rgba(5,12,25,0.55)" }} />
+            <div className="absolute inset-0" style={{ background: "rgba(5,12,25,0.55)" }} />
           )}
 
           {/* Top-right controls */}
@@ -496,10 +496,11 @@ function CardMenu({
 
 // ── Grid card ─────────────────────────────────────────────────────────────────
 function GridCard({
-  nb, onRename, onDuplicate, onDelete, menuOpen, onMenuToggle,
+  nb, onRename, onDuplicate, onDelete, menuOpen, onMenuToggle, tourId, onTourClick,
 }: {
   nb: Notebook; onRename: () => void; onDuplicate: () => void; onDelete: () => void;
   menuOpen: boolean; onMenuToggle: () => void;
+  tourId?: string; onTourClick?: () => void;
 }) {
   const color = nb.color || "#38E0C3";
   return (
@@ -512,7 +513,9 @@ function GridCard({
       className="relative group"
     >
       <Link
+        id={tourId}
         to={`/notebooks/${nb.id}`}
+        onClick={onTourClick}
         className="flex flex-col rounded-2xl overflow-hidden transition-all duration-150"
         style={{ background: "var(--surface-1)", border: "0.5px solid var(--border)" }}
         onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(56,224,195,0.2)")}
@@ -788,11 +791,13 @@ export default function NotebooksPage() {
         {!isLoading && filtered.length > 0 && view === "grid" && (
           <AnimatePresence>
             <motion.div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" layout>
-              {filtered.map(nb => (
+              {filtered.map((nb, idx) => (
                 <GridCard key={nb.id} nb={nb} menuOpen={activeMenuId === nb.id} onMenuToggle={() => menuToggle(nb.id)}
                   onRename={() => { setRenamingNb(nb); setActiveMenuId(null); }}
                   onDuplicate={() => { duplicateNotebook.mutate(nb); toast.success("Notebook duplicated!"); setActiveMenuId(null); }}
                   onDelete={() => { handleDelete(nb); setActiveMenuId(null); }}
+                  tourId={idx === 0 ? "tour-notebook-demo-card" : undefined}
+                  onTourClick={idx === 0 ? () => { if (activeTour.isActive) setTimeout(activeTour.moveNext, 1100); } : undefined}
                 />
               ))}
               <motion.button layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}
