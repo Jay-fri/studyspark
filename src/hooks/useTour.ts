@@ -218,12 +218,7 @@ export function useTour() {
               align: "start",
             },
             onHighlightStarted: skipIfHidden("#tour-upload-zone"),
-            // Going back from the first desktop interior step returns to the notebooks list
-            onPrevClick: () => {
-              navigate("/notebooks");
-              setTimeout(() => driverObj.movePrev(), 800);
-            },
-          },
+          } as DriveStep,
           {
             element: "#tour-chat-input",
             popover: {
@@ -340,7 +335,7 @@ export function useTour() {
           onNextClick: () => {
             ensureDemoNotebook();
           },
-        },
+        } as any,
 
         // ── 7. Demo notebook card — user must tap to open ────────────────────
         {
