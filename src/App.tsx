@@ -7,6 +7,7 @@ import { queryClient } from "@/lib/queryClient";
 import { AppShell } from "@/components/layout/AppShell";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { AuthBootstrap } from "@/components/auth/AuthBootstrap";
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { useTheme } from "@/hooks/useTheme";
 
 // Lazy-loaded pages
@@ -47,6 +48,7 @@ export default function App() {
       <BrowserRouter>
         <ThemeProvider>
           <AuthBootstrap />
+          <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
             <Routes>
               {/* Public */}
@@ -82,6 +84,7 @@ export default function App() {
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Suspense>
+          </ErrorBoundary>
         </ThemeProvider>
       </BrowserRouter>
       <ReactQueryDevtools initialIsOpen={false} />

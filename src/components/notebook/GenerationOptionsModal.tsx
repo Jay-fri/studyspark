@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { Portal } from "@/components/shared/Portal";
 import { cn } from "@/lib/utils";
 import type { GenerationOptions } from "@/types";
 
@@ -46,6 +47,7 @@ export function GenerationOptionsModal({ type, onConfirm, onClose }: Props) {
   };
 
   return (
+    <Portal>
     <AnimatePresence>
       {type && (
         <>
@@ -149,5 +151,6 @@ export function GenerationOptionsModal({ type, onConfirm, onClose }: Props) {
         </>
       )}
     </AnimatePresence>
+    </Portal>
   );
 }

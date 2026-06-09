@@ -94,6 +94,7 @@ export function useNotebookSources(notebookId: string | undefined) {
   const qc = useQueryClient();
   const userId = useAuthStore((s) => s.user?.id);
   const { setSources, addSource, updateSource, removeSource } = useNotebookStore();
+  const loadedForRef = useRef<string | undefined>(undefined);
 
   const query = useQuery({
     queryKey: ["sources", notebookId],
@@ -107,11 +108,35 @@ export function useNotebookSources(notebookId: string | undefined) {
       return data ?? [];
     },
     enabled: !!notebookId,
-    staleTime: 2 * 60_000,
+    staleTime: 0,
     gcTime:    10 * 60_000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
-  useEffect(() => { if (query.data) setSources(query.data); }, [query.data, setSources, notebookId]);
+  // Always repopulate store when notebook changes or data arrives fresh
+  useEffect(() => {
+    if (!query.data) return;
+    const isNewNotebook = loadedForRef.current !== notebookId;
+    if (isNewNotebook || query.data !== undefined) {
+      loadedForRef.current = notebookId;
+      setSources(query.data);
+    }
+  }, [query.data, notebookId, setSources]);
+
+  // Supabase Realtime — keep sources live without polling
+  useEffect(() => {
+    if (!notebookId) return;
+    const channel = supabase
+      .channel(`sources:${notebookId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sources", filter: `notebook_id=eq.${notebookId}` },
+        () => { qc.invalidateQueries({ queryKey: ["sources", notebookId] }); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [notebookId, qc]);
 
   const renameSource = useMutation({
     mutationFn: async ({ id, title }: { id: string; title: string }): Promise<Source> => {
@@ -227,8 +252,9 @@ export function useAIOutputs(notebookId: string | undefined) {
       return data ?? [];
     },
     enabled: !!notebookId,
-    staleTime: 5 * 60_000,
+    staleTime: 0,
     gcTime:    15 * 60_000,
+    refetchOnMount: true,
   });
 
   useEffect(() => { if (query.data) setAIOutputs(query.data); }, [query.data, setAIOutputs, notebookId]);

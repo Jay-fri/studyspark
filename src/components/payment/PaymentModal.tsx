@@ -8,6 +8,7 @@ import { useUIStore }      from "@/stores/uiStore";
 import { useFlutterwave }  from "@/hooks/useFlutterwave";
 import { useAuthStore }    from "@/stores/authStore";
 import { TOKEN_PACKAGES }  from "@/types";
+import { Portal }          from "@/components/shared/Portal";
 import { cn }              from "@/lib/utils";
 
 // How many of each action a package unlocks (based on TOKEN_COSTS)
@@ -40,6 +41,7 @@ export function PaymentModal() {
   const pkg = TOKEN_PACKAGES[selected];
 
   return (
+    <Portal>
     <AnimatePresence>
       {paymentModalOpen && (
         <motion.div
@@ -202,5 +204,6 @@ export function PaymentModal() {
         </motion.div>
       )}
     </AnimatePresence>
+    </Portal>
   );
 }

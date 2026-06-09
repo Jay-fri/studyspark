@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import { Toaster } from "react-hot-toast";
 import { useTheme } from "@/hooks/useTheme";
 import { useNotebooks } from "@/hooks/useNotebook";
@@ -18,11 +17,10 @@ export function AppShell() {
   useNotebooks(); // Keep notebook store populated on every page, not just /notebooks/:id
 
   const location = useLocation();
-  const routeKey = location.pathname.split("/")[1] ?? "/";
-  const mainRef  = useRef<HTMLElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
 
   // /notebooks/:id pages manage their own layout (tab bar replaces navbar on mobile)
-  const segments       = location.pathname.split("/").filter(Boolean);
+  const segments = location.pathname.split("/").filter(Boolean);
   const isNotebookView = segments[0] === "notebooks" && segments.length > 1;
 
   // Scroll the main content area back to the top on every route change
@@ -33,43 +31,122 @@ export function AppShell() {
   }, [location.pathname, isNotebookView]);
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-surface-0">
+    <div
+      className="relative flex h-dvh overflow-hidden"
+      style={{ background: "#0a1628" }}>
+      {/* Orb 1 mobile — tight to top-left corner */}
+      <div
+        className="md:hidden"
+        style={{
+          position: "absolute",
+          width: "500px",
+          height: "500px",
+          borderRadius: "50%",
+          background: "rgba(56, 224, 195, 0.12)",
+          top: "-260px",
+          left: "-200px",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+      {/* Orb 1 desktop — pulled inward so more glow is visible */}
+      <div
+        className="hidden md:block"
+        style={{
+          position: "absolute",
+          width: "500px",
+          height: "500px",
+          borderRadius: "50%",
+          background: "rgba(56, 224, 195, 0.12)",
+          top: "-80px",
+          left: "-60px",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+      {/* Orb 2 — mobile: right side ~55% down */}
+      <div
+        className="md:hidden"
+        style={{
+          position: "absolute",
+          width: "300px",
+          height: "300px",
+          borderRadius: "50%",
+          background: "rgba(99, 179, 255, 0.08)",
+          top: "55%",
+          right: "-80px",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+      {/* Orb 2 — desktop: bottom-right */}
+      <div
+        className="hidden md:block"
+        style={{
+          position: "absolute",
+          width: "380px",
+          height: "380px",
+          borderRadius: "50%",
+          background: "rgba(99, 179, 255, 0.08)",
+          bottom: "-80px",
+          right: "-60px",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+      {/* Orb 3 — mint, center (desktop only) */}
+      <div
+        className="hidden md:block"
+        style={{
+          position: "absolute",
+          width: "260px",
+          height: "260px",
+          borderRadius: "50%",
+          background: "rgba(56, 224, 195, 0.05)",
+          top: "45%",
+          right: "28%",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+
       {/* Desktop sidebar */}
-      <Sidebar />
+      <div className="relative" style={{ zIndex: 1 }}>
+        <Sidebar />
+      </div>
 
       {/* Main content area */}
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+      <div
+        className="relative flex flex-col flex-1 min-w-0 overflow-hidden"
+        style={{ zIndex: 1 }}>
         {/* Network/token banners */}
         <OfflineBanner />
         <TokenBanner />
 
-        {/* Top navbar — hidden on mobile when inside a specific notebook */}
-        <div className={isNotebookView ? "hidden md:contents" : "contents"}>
+        {/* Top navbar — always hidden on mobile (bottom nav handles mobile navigation) */}
+        <div className="hidden md:contents">
           <Navbar />
         </div>
 
-        {/* Page content with transition */}
-        <main ref={mainRef} className={
-          isNotebookView
-            ? "flex-1 overflow-hidden relative"
-            : "flex-1 overflow-y-auto scrollbar-thin relative"
+        {/* Page content */}
+        <main
+          ref={mainRef}
+          className={
+            isNotebookView
+              ? "flex-1 overflow-hidden relative"
+              : "flex-1 overflow-y-auto scrollbar-thin relative"
           }
-          style={!isNotebookView ? {
-            paddingBottom: "calc(5rem + env(safe-area-inset-bottom, 0px))"
-          } : undefined}
-        >
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={routeKey}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.14, ease: "easeOut" }}
-              className={isNotebookView ? "h-full bg-[var(--surface-0)]" : "min-h-full bg-[var(--surface-0)]"}
-            >
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
+          style={
+            !isNotebookView
+              ? {
+                  paddingBottom:
+                    "calc(5rem + env(safe-area-inset-bottom, 0px))",
+                }
+              : undefined
+          }>
+          <div className={isNotebookView ? "h-full" : "min-h-full"}>
+            <Outlet />
+          </div>
         </main>
       </div>
 

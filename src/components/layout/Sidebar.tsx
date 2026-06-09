@@ -21,7 +21,7 @@ function TokenDots({ balance, max = 1000 }: { balance: number; max?: number }) {
   const color =
     balance < 50  ? "#EF4444" :
     balance < 200 ? "#F59E0B" :
-    "#10B981";
+    "#38E0C3";
   return (
     <div className="flex gap-1 items-center">
       {Array.from({ length: total }).map((_, i) => (
@@ -50,7 +50,7 @@ export function Sidebar() {
   const tokenColor =
     balance < 50  ? "#EF4444" :
     balance < 200 ? "#F59E0B" :
-    "#10B981";
+    "#38E0C3";
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -62,7 +62,7 @@ export function Sidebar() {
     <motion.aside
       animate={{ width: sidebarCollapsed ? 56 : 220 }}
       transition={{ type: "spring", stiffness: 320, damping: 32 }}
-      className="hidden md:flex relative flex-col h-full shrink-0 overflow-hidden"
+      className="hidden md:flex relative flex-col h-full shrink-0 overflow-hidden dark:backdrop-blur-[20px]"
       style={{
         background: "var(--surface-1)",
         borderRight: "0.5px solid var(--border)",
@@ -142,7 +142,8 @@ export function Sidebar() {
                   sidebarCollapsed ? "w-9 h-9 mx-auto justify-center" : "gap-3 px-3 py-2.5"
                 )}
                 style={{
-                  background: isActive ? "rgba(249,115,22,0.07)" : "transparent",
+                  background: isActive ? "rgba(56,224,195,0.1)" : "transparent",
+                  borderLeft: isActive && !sidebarCollapsed ? "none" : undefined,
                 }}
                 onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "var(--surface-2)"; }}
                 onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
@@ -189,7 +190,7 @@ export function Sidebar() {
                   "relative flex items-center rounded-xl transition-all duration-150",
                   sidebarCollapsed ? "w-9 h-9 mx-auto justify-center" : "gap-3 px-3 py-2.5"
                 )}
-                style={{ background: isActive ? "rgba(249,115,22,0.07)" : "transparent" }}
+                style={{ background: isActive ? "rgba(56,224,195,0.1)" : "transparent" }}
                 onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "var(--surface-2)"; }}
                 onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
               >
@@ -262,7 +263,7 @@ export function Sidebar() {
             ) : (
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-                style={{ background: "rgba(249,115,22,0.15)", color: "var(--brand-primary)" }}
+                style={{ background: "rgba(56,224,195,0.15)", color: "var(--brand-primary)" }}
               >
                 {initials}
               </div>
@@ -275,7 +276,7 @@ export function Sidebar() {
             ) : (
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                style={{ background: "rgba(249,115,22,0.15)", color: "var(--brand-primary)" }}
+                style={{ background: "rgba(56,224,195,0.15)", color: "var(--brand-primary)" }}
               >
                 {initials}
               </div>

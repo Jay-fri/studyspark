@@ -119,8 +119,15 @@ export function Navbar() {
   return (
     <>
       {/* Top Bar */}
-      <header className="sticky top-0 z-30 flex items-center gap-3 h-16 px-4 bg-surface-0/95 backdrop-blur-md border-b border-border">
-        {/* Hamburger (mobile) */}
+      <header
+        className="sticky top-0 z-30 flex items-center gap-3 h-14 px-4 border-b border-border"
+        style={{
+          background: "var(--surface-0)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+        }}
+      >
+        {/* Hamburger (mobile — kept for drawer access even though bottom nav is primary) */}
         <button
           onClick={() => setMobileDrawerOpen(true)}
           className="md:hidden p-2 -ml-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-1 transition-colors"
@@ -135,9 +142,9 @@ export function Navbar() {
               {i > 0 && <ChevronRight className="w-3.5 h-3.5 text-text-muted shrink-0" />}
               <span
                 className={cn(
-                  "text-sm truncate",
+                  "text-xs truncate",
                   i === breadcrumb.length - 1
-                    ? "font-semibold text-text-primary"
+                    ? "font-medium text-text-primary"
                     : "text-text-muted hover:text-text-secondary"
                 )}
               >
@@ -155,7 +162,7 @@ export function Navbar() {
             className={cn(
               "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg",
               "bg-surface-1 border border-border text-text-muted text-xs",
-              "hover:border-brand-primary/40 hover:text-text-secondary transition-colors"
+              "hover:border-[rgba(56,224,195,0.4)] hover:text-text-secondary transition-colors"
             )}
           >
             <Search className="w-3.5 h-3.5" />
@@ -170,7 +177,7 @@ export function Navbar() {
             onClick={() => setCommandPaletteOpen(true)}
             className="sm:hidden p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-1 transition-colors"
           >
-            <Search className="w-4.5 h-4.5" />
+            <Search className="w-4 h-4" />
           </button>
 
           {/* Theme toggle */}
@@ -267,8 +274,16 @@ export function Navbar() {
                   className="w-8 h-8 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full gradient-brand flex items-center justify-center">
-                  <span className="text-xs font-bold text-white">{initials}</span>
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{
+                    background: "rgba(56,224,195,0.2)",
+                    border: "1px solid rgba(56,224,195,0.3)",
+                  }}
+                >
+                  <span className="text-xs font-bold" style={{ color: "var(--brand-primary)" }}>
+                    {initials}
+                  </span>
                 </div>
               )}
             </button>
@@ -397,8 +412,11 @@ export function Navbar() {
 
                 {/* User row */}
                 <div className="flex items-center gap-3 px-2">
-                  <div className="w-8 h-8 rounded-full gradient-brand flex items-center justify-center shrink-0">
-                    <span className="text-xs font-bold text-white">{initials}</span>
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: "rgba(56,224,195,0.2)", border: "1px solid rgba(56,224,195,0.3)" }}
+                  >
+                    <span className="text-xs font-bold" style={{ color: "var(--brand-primary)" }}>{initials}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-text-primary truncate">

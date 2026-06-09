@@ -1,222 +1,217 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ZoomIn, ZoomOut, RotateCcw, Download, Maximize2, Minimize2 } from "lucide-react";
 import type { MindMapNode } from "@/types";
 
-// ── Branch colours (index 0 = root orange, 1-7 = topics) ─────────────────────
-const COLORS = [
-  "#F97316", "#6366f1", "#10b981", "#f59e0b",
-  "#ec4899", "#14b8a6", "#8b5cf6", "#ef4444",
+// ── Colors ────────────────────────────────────────────────────────────────────
+const PALETTE = [
+  "#6366f1","#10b981","#f59e0b","#ec4899",
+  "#14b8a6","#8b5cf6","#ef4444","#3b82f6",
 ];
 
-// ── Per-depth geometry constants ───────────────────────────────────────────────
-const NODE = {
-  0: { h: 46, maxW: 180, font: 13, cw: 7.8, pad: 32, maxChars: 20 },
-  1: { h: 36, maxW: 150, font: 11, cw: 6.5, pad: 28, maxChars: 20 },
-  2: { h: 28, maxW: 134, font: 10, cw: 5.8, pad: 24, maxChars: 22 },
+// ── Per-depth config ──────────────────────────────────────────────────────────
+const DEP = {
+  0: { h: 42, fs: 13, px: 22, maxC: 22 },
+  1: { h: 34, fs: 11, px: 18, maxC: 22 },
+  2: { h: 30, fs: 10, px: 14, maxC: 28 },
 } as const;
 
-const BTN_R = 9;   // expand toggle button radius
+const CW = [7.5, 6.4, 5.7];   // approx char-width per depth
+const DX = [-340, 20, 360];    // x-center per depth (root, topics, subtopics)
+const VG = 10;                  // gap between siblings
+const TG = 20;                  // extra gap between topic blocks
 
-// ── Utility helpers ────────────────────────────────────────────────────────────
-function trunc(s: string, max: number) {
-  return s.length > max ? s.slice(0, max - 1) + "…" : s;
+function nw(lbl: string, d: 0 | 1 | 2) {
+  return Math.min(lbl.length * CW[d] + DEP[d].px * 2, d === 0 ? 215 : 195);
+}
+function trunc(s: string, n: number) {
+  return s.length > n ? s.slice(0, n - 1) + "…" : s;
+}
+// Cubic bezier from right edge of node1 → left edge of node2
+function bpath(x1: number, y1: number, x2: number, y2: number, w1: number, w2: number) {
+  const sx = x1 + w1 / 2, ex = x2 - w2 / 2, cp = (ex - sx) * 0.45;
+  const f = (v: number) => v.toFixed(1);
+  return `M${f(sx)},${f(y1)} C${f(sx+cp)},${f(y1)} ${f(ex-cp)},${f(y2)} ${f(ex)},${f(y2)}`;
 }
 
-function nw(label: string, d: 0 | 1 | 2) {
-  const g = NODE[d];
-  return Math.min(label.length * g.cw + g.pad, g.maxW);
-}
-
-function edgeClip(x1: number, y1: number, d1: 0 | 1 | 2,
-                  x2: number, y2: number, d2: 0 | 1 | 2) {
-  const a = Math.atan2(y2 - y1, x2 - x1);
-  const o1 = NODE[d1].h / 2 + 4;
-  const o2 = NODE[d2].h / 2 + 4;
-  return {
-    sx: x1 + o1 * Math.cos(a), sy: y1 + o1 * Math.sin(a),
-    tx: x2 - o2 * Math.cos(a), ty: y2 - o2 * Math.sin(a),
-  };
-}
-
-// ── Layout types ───────────────────────────────────────────────────────────────
+// ── Layout types ──────────────────────────────────────────────────────────────
 interface LNode {
-  id: string; label: string; display: string;
-  x: number; y: number;
-  px: number; py: number;         // parent x/y (for spring origin)
-  depth: 0 | 1 | 2; color: string;
-  hasKids: boolean; w: number; h: number;
+  id: string; lbl: string; disp: string;
+  x: number; y: number; d: 0 | 1 | 2;
+  col: string; hasKids: boolean; isOpen: boolean;
+  w: number; h: number; tid: string;
 }
 interface LEdge {
-  id: string; sx: number; sy: number; tx: number; ty: number;
-  color: string; topicId: string; isStatic: boolean;
+  id: string; path: string; col: string;
+  dyn: boolean; tid: string;
 }
 
+// ── Layout fn ─────────────────────────────────────────────────────────────────
 function computeLayout(root: MindMapNode, expanded: Set<string>) {
   const topics = root.children ?? [];
-  const n = topics.length;
-  // Scale radius so topics don't crowd; minimum 190
-  const R1 = Math.max(190, n * 38 + 60);
-  const R2 = 165;
+  const rDisp  = trunc(root.label, DEP[0].maxC);
+  const rW     = nw(rDisp, 0);
 
-  const staticNodes: LNode[] = [];
-  const dynamicNodes: LNode[] = [];
-  const staticEdges: LEdge[] = [];
-  const dynamicEdges: LEdge[] = [];
-
-  // Root
-  const rLabel = trunc(root.label, NODE[0].maxChars);
-  staticNodes.push({
-    id: root.id, label: root.label, display: rLabel,
-    x: 0, y: 0, px: 0, py: 0,
-    depth: 0, color: COLORS[0],
-    hasKids: n > 0, w: nw(rLabel, 0), h: NODE[0].h,
+  const blocks = topics.map((t, i) => {
+    const subs   = t.children ?? [];
+    const isOpen = expanded.has(t.id);
+    const disp   = trunc(t.label, DEP[1].maxC);
+    const tw     = nw(disp, 1);
+    const col    = PALETTE[i % PALETTE.length];
+    const bh     = isOpen && subs.length
+      ? subs.length * DEP[2].h + (subs.length - 1) * VG
+      : DEP[1].h;
+    return { t, subs, isOpen, disp, tw, col, bh };
   });
 
-  topics.forEach((topic, i) => {
-    const angle = (i / n) * 2 * Math.PI - Math.PI / 2;
-    const tx = R1 * Math.cos(angle);
-    const ty = R1 * Math.sin(angle);
-    const col = COLORS[(i % (COLORS.length - 1)) + 1];
-    const tLabel = trunc(topic.label, NODE[1].maxChars);
-    const tw = nw(tLabel, 1);
-    const kids = topic.children ?? [];
+  const totalH = blocks.reduce((s, b) => s + b.bh, 0) + (blocks.length - 1) * TG;
+  let curY = -totalH / 2;
 
-    staticNodes.push({
-      id: topic.id, label: topic.label, display: tLabel,
-      x: tx, y: ty, px: 0, py: 0,
-      depth: 1, color: col,
-      hasKids: kids.length > 0, w: tw, h: NODE[1].h,
+  const nodes: LNode[] = [];
+  const edges: LEdge[] = [];
+  const tys: number[]  = [];
+
+  blocks.forEach(({ t, subs, isOpen, disp, tw, col, bh }) => {
+    const ty = isOpen && subs.length ? curY + bh / 2 : curY + DEP[1].h / 2;
+    tys.push(ty);
+
+    nodes.push({
+      id: t.id, lbl: t.label, disp,
+      x: DX[1], y: ty, d: 1, col,
+      hasKids: subs.length > 0, isOpen,
+      w: tw, h: DEP[1].h, tid: t.id,
     });
 
-    // Root → topic edge
-    const ep = edgeClip(0, 0, 0, tx, ty, 1);
-    staticEdges.push({
-      id: `${root.id}→${topic.id}`,
-      sx: ep.sx, sy: ep.sy, tx: ep.tx, ty: ep.ty,
-      color: col, topicId: topic.id, isStatic: true,
-    });
-
-    // Subtopics (only when topic is expanded)
-    if (expanded.has(topic.id)) {
-      const ns = kids.length;
-      const spreadMax = Math.PI * 0.72;
-      const spread = ns <= 1 ? 0 : Math.min(spreadMax, ns * 0.32);
-      kids.forEach((sub, j) => {
-        const subA = angle + (ns === 1 ? 0 : -spread / 2 + (spread / (ns - 1)) * j);
-        const sx = tx + R2 * Math.cos(subA);
-        const sy = ty + R2 * Math.sin(subA);
-        const sLabel = trunc(sub.label, NODE[2].maxChars);
-        const sw = nw(sLabel, 2);
-
-        dynamicNodes.push({
-          id: sub.id, label: sub.label, display: sLabel,
-          x: sx, y: sy, px: tx, py: ty,
-          depth: 2, color: col,
-          hasKids: false, w: sw, h: NODE[2].h,
+    if (isOpen) {
+      subs.forEach((s, j) => {
+        const sd = trunc(s.label, DEP[2].maxC);
+        const sw = nw(sd, 2);
+        const sy = curY + j * (DEP[2].h + VG) + DEP[2].h / 2;
+        nodes.push({
+          id: s.id, lbl: s.label, disp: sd,
+          x: DX[2], y: sy, d: 2, col,
+          hasKids: false, isOpen: false,
+          w: sw, h: DEP[2].h, tid: t.id,
         });
-
-        const ep2 = edgeClip(tx, ty, 1, sx, sy, 2);
-        dynamicEdges.push({
-          id: `${topic.id}→${sub.id}`,
-          sx: ep2.sx, sy: ep2.sy, tx: ep2.tx, ty: ep2.ty,
-          color: col, topicId: topic.id, isStatic: false,
+        edges.push({
+          id: `${t.id}→${s.id}`,
+          path: bpath(DX[1], ty, DX[2], sy, tw, sw),
+          col, dyn: true, tid: t.id,
         });
       });
     }
+
+    curY += bh + TG;
   });
 
-  return { staticNodes, dynamicNodes, staticEdges, dynamicEdges };
+  const ry = tys.length ? (tys[0] + tys[tys.length - 1]) / 2 : 0;
+
+  nodes.unshift({
+    id: root.id, lbl: root.label, disp: rDisp,
+    x: DX[0], y: ry, d: 0, col: PALETTE[0],
+    hasKids: topics.length > 0, isOpen: false,
+    w: rW, h: DEP[0].h, tid: root.id,
+  });
+
+  // Root → topic edges (paths depend on ry, so computed after)
+  topics.forEach((t) => {
+    const tn = nodes.find((n) => n.id === t.id)!;
+    edges.push({
+      id: `root→${t.id}`,
+      path: bpath(DX[0], ry, tn.x, tn.y, rW, tn.w),
+      col: tn.col, dyn: false, tid: t.id,
+    });
+  });
+
+  return { nodes, edges };
 }
 
-// ── Single node rendered inside a <motion.g> ──────────────────────────────────
-function MapNode({
-  n, expanded, onToggle,
-}: { n: LNode; expanded: boolean; onToggle: (id: string) => void }) {
-  const { display, depth, color, hasKids, w, h } = n;
-  const rx = h / 2;
-  const font = NODE[depth].font;
-  const btnX = w / 2 + 16;
+// ── Node component (drawn centred at 0,0) ─────────────────────────────────────
+function MapNode({ n, onToggle }: { n: LNode; onToggle: (id: string) => void }) {
+  const isRoot = n.d === 0;
+  const rx     = n.h / 2;
+  const btnX   = n.w / 2 + 14;
 
   return (
-    <g style={{ cursor: hasKids && depth < 2 ? "pointer" : "default" }}
-       onClick={() => hasKids && depth < 2 && onToggle(n.id)}>
-
+    <g
+      onClick={() => n.hasKids && n.d < 2 && onToggle(n.id)}
+      style={{ cursor: n.hasKids && n.d < 2 ? "pointer" : "default" }}
+    >
       {/* pill */}
       <rect
-        x={-w / 2} y={-h / 2} width={w} height={h} rx={rx}
-        fill={depth === 0 ? color : color + "18"}
-        stroke={depth === 0 ? "none" : color}
-        strokeWidth={1.5}
+        x={-n.w / 2} y={-n.h / 2} width={n.w} height={n.h} rx={rx}
+        style={{
+          fill:          isRoot ? n.col : "var(--surface-2)",
+          stroke:        n.col,
+          strokeWidth:   isRoot ? 0 : 1.5,
+          strokeOpacity: 0.65,
+        }}
       />
-
       {/* label */}
       <text
-        x={0} y={0}
         textAnchor="middle" dominantBaseline="middle"
-        fontSize={font}
-        fontWeight={depth < 2 ? 600 : 500}
-        fill={depth === 0 ? "#fff" : color}
-        style={{ pointerEvents: "none", userSelect: "none" }}
+        fontSize={DEP[n.d].fs} fontWeight={n.d < 2 ? 600 : 500}
+        style={{ fill: isRoot ? "#fff" : "var(--text-primary)", pointerEvents: "none", userSelect: "none" }}
       >
-        {display}
+        {n.disp}
       </text>
-
-      {/* expand / collapse toggle */}
-      {hasKids && depth < 2 && (
+      {/* expand / collapse button */}
+      {n.hasKids && n.d < 2 && (
         <g
           transform={`translate(${btnX}, 0)`}
-          style={{ cursor: "pointer" }}
           onClick={(e) => { e.stopPropagation(); onToggle(n.id); }}
+          style={{ cursor: "pointer" }}
         >
-          <motion.circle
-            r={BTN_R}
-            animate={{ fill: expanded ? color : color + "28" }}
-            stroke={color} strokeWidth={1.5}
-            transition={{ duration: 0.18 }}
+          <circle
+            r={8}
+            style={{ fill: n.isOpen ? n.col : `${n.col}30`, stroke: n.col, strokeWidth: 1.5 }}
           />
-          {/* "+" rotates to "×" when open */}
-          <motion.line
-            x1="-4" y1="0" x2="4" y2="0"
-            stroke={expanded ? "#fff" : color}
-            strokeWidth={2} strokeLinecap="round"
-          />
-          <motion.line
-            x1="0" y1="-4" x2="0" y2="4"
-            animate={{ opacity: expanded ? 0 : 1 }}
-            stroke={color}
-            strokeWidth={2} strokeLinecap="round"
-            transition={{ duration: 0.15 }}
-          />
+          <text
+            textAnchor="middle" dominantBaseline="middle"
+            fontSize={10} fontWeight={700}
+            style={{ fill: n.isOpen ? "#fff" : n.col, pointerEvents: "none", userSelect: "none" }}
+          >
+            {n.isOpen ? "‹" : "›"}
+          </text>
         </g>
       )}
     </g>
   );
 }
 
-// ── Pan / zoom state ──────────────────────────────────────────────────────────
+// ── Pan/zoom helpers ──────────────────────────────────────────────────────────
 interface Tf { x: number; y: number; scale: number }
-function getTouchDist(t: TouchList) {
-  const dx = t[0].clientX - t[1].clientX;
-  const dy = t[0].clientY - t[1].clientY;
+function touchDist(t: TouchList) {
+  const dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-// ── Main export ───────────────────────────────────────────────────────────────
-export function MindMapView({ root }: { root: MindMapNode }) {
-  const [expanded,  setExpanded]  = useState<Set<string>>(new Set());
-  const [tf,        setTf]        = useState<Tf>({ x: 0, y: 0, scale: 1 });
-  const [dragging,  setDragging]  = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const svgRef       = useRef<SVGSVGElement>(null);
-  const lastPt       = useRef({ x: 0, y: 0 });
-  const lastTouch    = useRef<{ x: number; y: number } | null>(null);
-  const pinchStart   = useRef<{ dist: number; scale: number } | null>(null);
+// ── Public export (guard) ─────────────────────────────────────────────────────
+export function MindMapView({ root }: { root: MindMapNode | undefined | null }) {
+  if (!root?.id) {
+    return (
+      <div className="flex items-center justify-center h-full text-sm text-[var(--text-muted)]">
+        Mind map could not be rendered — try generating again.
+      </div>
+    );
+  }
+  return <MindMapInner root={root} />;
+}
 
-  const { staticNodes, dynamicNodes, staticEdges, dynamicEdges } = useMemo(
-    () => computeLayout(root, expanded),
-    [root, expanded]
-  );
+// ── Inner component ───────────────────────────────────────────────────────────
+function MindMapInner({ root }: { root: MindMapNode }) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [tf,       setTf]       = useState<Tf>({ x: 0, y: 0, scale: 1 });
+  const [dragging, setDragging] = useState(false);
+  const containerRef  = useRef<HTMLDivElement>(null);
+  const svgRef        = useRef<SVGSVGElement>(null);
+  const lastPt        = useRef({ x: 0, y: 0 });
+  const pointerDownPt = useRef({ x: 0, y: 0 });
+  const isDragRef     = useRef(false);
+  const lastTouch     = useRef<{ x: number; y: number } | null>(null);
+  const pinchStart    = useRef<{ dist: number; scale: number } | null>(null);
+
+  const { nodes, edges } = useMemo(() => computeLayout(root, expanded), [root, expanded]);
 
   const toggle = useCallback((id: string) => {
     setExpanded((prev) => {
@@ -237,7 +232,7 @@ export function MindMapView({ root }: { root: MindMapNode }) {
     .filter((c) => (c.children ?? []).length > 0)
     .every((c) => expanded.has(c.id));
 
-  // ── Wheel zoom / pan ──────────────────────────────────────────────────────
+  // Wheel zoom / pan
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -253,18 +248,17 @@ export function MindMapView({ root }: { root: MindMapNode }) {
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
-  // ── Touch ─────────────────────────────────────────────────────────────────
+  // Touch
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 1) {
-        lastTouch.current  = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        lastTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         pinchStart.current = null;
       } else if (e.touches.length === 2) {
         lastTouch.current = null;
-        const dist = getTouchDist(e.touches);
-        setTf((t) => { pinchStart.current = { dist, scale: t.scale }; return t; });
+        setTf((t) => { pinchStart.current = { dist: touchDist(e.touches), scale: t.scale }; return t; });
       }
     };
     const onTouchMove = (e: TouchEvent) => {
@@ -275,38 +269,51 @@ export function MindMapView({ root }: { root: MindMapNode }) {
         lastTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         setTf((t) => ({ ...t, x: t.x + dx, y: t.y + dy }));
       } else if (e.touches.length === 2 && pinchStart.current) {
-        const ratio = getTouchDist(e.touches) / pinchStart.current.dist;
+        const ratio = touchDist(e.touches) / pinchStart.current.dist;
         setTf((t) => ({ ...t, scale: Math.min(Math.max(pinchStart.current!.scale * ratio, 0.2), 5) }));
       }
     };
     const onTouchEnd = () => { lastTouch.current = null; pinchStart.current = null; };
-    el.addEventListener("touchstart", onTouchStart, { passive: false });
-    el.addEventListener("touchmove",  onTouchMove,  { passive: false });
-    el.addEventListener("touchend",   onTouchEnd);
-    el.addEventListener("touchcancel",onTouchEnd);
+    el.addEventListener("touchstart",  onTouchStart,  { passive: false });
+    el.addEventListener("touchmove",   onTouchMove,   { passive: false });
+    el.addEventListener("touchend",    onTouchEnd);
+    el.addEventListener("touchcancel", onTouchEnd);
     return () => {
-      el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove",  onTouchMove);
-      el.removeEventListener("touchend",   onTouchEnd);
-      el.removeEventListener("touchcancel",onTouchEnd);
+      el.removeEventListener("touchstart",  onTouchStart);
+      el.removeEventListener("touchmove",   onTouchMove);
+      el.removeEventListener("touchend",    onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
     };
   }, []);
 
-  // ── Mouse drag ────────────────────────────────────────────────────────────
+  // Mouse drag — defer pointer capture until movement exceeds threshold so
+  // click events on SVG buttons are not swallowed by the container.
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.pointerType !== "mouse") return;
-    setDragging(true);
+    pointerDownPt.current = { x: e.clientX, y: e.clientY };
     lastPt.current = { x: e.clientX, y: e.clientY };
-    e.currentTarget.setPointerCapture(e.pointerId);
+    isDragRef.current = false;
   };
   const onPointerMove = (e: React.PointerEvent) => {
-    if (e.pointerType !== "mouse" || !dragging) return;
-    const dx = e.clientX - lastPt.current.x;
-    const dy = e.clientY - lastPt.current.y;
+    if (e.pointerType !== "mouse" || !e.buttons) return;
+    const dx = e.clientX - pointerDownPt.current.x;
+    const dy = e.clientY - pointerDownPt.current.y;
+    if (!isDragRef.current) {
+      if (Math.sqrt(dx * dx + dy * dy) < 5) return;
+      isDragRef.current = true;
+      setDragging(true);
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+    const mdx = e.clientX - lastPt.current.x;
+    const mdy = e.clientY - lastPt.current.y;
     lastPt.current = { x: e.clientX, y: e.clientY };
-    setTf((t) => ({ ...t, x: t.x + dx, y: t.y + dy }));
+    setTf((t) => ({ ...t, x: t.x + mdx, y: t.y + mdy }));
   };
-  const onPointerUp = (e: React.PointerEvent) => { if (e.pointerType === "mouse") setDragging(false); };
+  const onPointerUp = (e: React.PointerEvent) => {
+    if (e.pointerType !== "mouse") return;
+    isDragRef.current = false;
+    setDragging(false);
+  };
 
   const zoomIn  = () => setTf((t) => ({ ...t, scale: Math.min(t.scale * 1.25, 5) }));
   const zoomOut = () => setTf((t) => ({ ...t, scale: Math.max(t.scale * 0.8, 0.2) }));
@@ -321,62 +328,60 @@ export function MindMapView({ root }: { root: MindMapNode }) {
     URL.revokeObjectURL(url);
   }, []);
 
-  // Spring config for node appearance
-  const spring = { type: "spring" as const, stiffness: 360, damping: 28 };
+  const staticEdges  = edges.filter((e) => !e.dyn);
+  const dynamicEdges = edges.filter((e) => e.dyn);
+  const staticNodes  = nodes.filter((n) => n.d <= 1);
+  const dynNodes     = nodes.filter((n) => n.d === 2);
+
+  const spring = { type: "spring" as const, stiffness: 380, damping: 30 };
 
   return (
     <div className="flex flex-col h-full select-none">
 
-      {/* ── Toolbar ── */}
+      {/* Toolbar */}
       <div className="flex items-center gap-1 px-3 py-2 border-b border-[var(--border)] bg-[var(--surface-1)] shrink-0">
-        <button onClick={zoomIn}  className="p-1.5 rounded-lg hover:bg-[var(--surface-2)] transition-colors text-[var(--text-muted)]" title="Zoom in"><ZoomIn  className="w-3.5 h-3.5" /></button>
-        <button onClick={zoomOut} className="p-1.5 rounded-lg hover:bg-[var(--surface-2)] transition-colors text-[var(--text-muted)]" title="Zoom out"><ZoomOut className="w-3.5 h-3.5" /></button>
-        <button onClick={reset}   className="p-1.5 rounded-lg hover:bg-[var(--surface-2)] transition-colors text-[var(--text-muted)]" title="Reset view"><RotateCcw className="w-3.5 h-3.5" /></button>
+        <button onClick={zoomIn}  className="p-1.5 rounded-lg hover:bg-[var(--surface-2)] transition-colors text-[var(--text-muted)]" title="Zoom in"><ZoomIn  className="w-3.5 h-3.5"/></button>
+        <button onClick={zoomOut} className="p-1.5 rounded-lg hover:bg-[var(--surface-2)] transition-colors text-[var(--text-muted)]" title="Zoom out"><ZoomOut className="w-3.5 h-3.5"/></button>
+        <button onClick={reset}   className="p-1.5 rounded-lg hover:bg-[var(--surface-2)] transition-colors text-[var(--text-muted)]" title="Reset"><RotateCcw className="w-3.5 h-3.5"/></button>
         <span className="text-[10px] text-[var(--text-muted)] tabular-nums w-9">{Math.round(tf.scale * 100)}%</span>
 
-        <div className="w-px h-4 bg-[var(--border)] mx-1" />
+        <div className="w-px h-4 bg-[var(--border)] mx-1"/>
 
         <button
           onClick={allExpanded ? collapseAll : expandAll}
           className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium hover:bg-[var(--surface-2)] transition-colors text-[var(--text-muted)]"
         >
-          {allExpanded ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
+          {allExpanded ? <Minimize2 className="w-3 h-3"/> : <Maximize2 className="w-3 h-3"/>}
           {allExpanded ? "Collapse all" : "Expand all"}
         </button>
 
-        <div className="flex-1" />
+        <div className="flex-1"/>
 
         <span className="text-[10px] text-[var(--text-muted)] hidden sm:block mr-2">
-          Click node to expand · Drag to pan · Ctrl+scroll to zoom
+          Click › to expand · Drag to pan · Ctrl+scroll to zoom
         </span>
 
         <button
           onClick={exportSVG}
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] border border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors text-[var(--text-muted)]"
         >
-          <Download className="w-3 h-3" />SVG
+          <Download className="w-3 h-3"/>SVG
         </button>
       </div>
 
-      {/* ── Canvas ── */}
+      {/* Canvas */}
       <div
         ref={containerRef}
         className="relative flex-1 overflow-hidden"
-        style={{
-          background: "var(--surface-0)",
-          cursor: dragging ? "grabbing" : "grab",
-          touchAction: "none",
-        }}
+        style={{ background: "var(--surface-0)", cursor: dragging ? "grabbing" : "grab", touchAction: "none" }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
       >
-        {/* Animated transform wrapper */}
         <div
           style={{
-            position: "absolute",
-            top: "50%", left: "50%",
+            position: "absolute", top: "50%", left: "50%",
             transform: `translate(calc(-50% + ${tf.x}px), calc(-50% + ${tf.y}px)) scale(${tf.scale})`,
             transformOrigin: "center center",
             transition: dragging ? "none" : "transform 0.1s ease-out",
@@ -384,90 +389,73 @@ export function MindMapView({ root }: { root: MindMapNode }) {
         >
           <svg
             ref={svgRef}
-            viewBox="-700 -600 1400 1200"
-            width={1400} height={1200}
+            viewBox="-560 -700 1280 1400"
+            width={1280} height={1400}
             style={{ display: "block", overflow: "visible" }}
           >
             <defs>
-              {/* dot-grid background */}
               <pattern id="mm-grid" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse">
-                <circle cx="1.5" cy="1.5" r="1.5" fill="var(--border)" opacity="0.6" />
+                <circle cx="1.5" cy="1.5" r="1.5" fill="var(--border)" opacity="0.5"/>
               </pattern>
-
-              {/* arrowhead markers per colour */}
-              {COLORS.slice(1).map((c) => (
-                <marker
-                  key={c}
-                  id={`arr-${c.replace("#","")}`}
-                  markerWidth="8" markerHeight="8"
-                  refX="6" refY="3"
-                  orient="auto"
-                >
-                  <path d="M0,0 L0,6 L8,3 z" fill={c} opacity={0.55} />
-                </marker>
-              ))}
             </defs>
+            <rect x="-560" y="-700" width="1280" height="1400" fill="url(#mm-grid)"/>
 
-            {/* dot grid fills entire SVG */}
-            <rect x="-700" y="-600" width="1400" height="1200" fill="url(#mm-grid)" />
-
-            {/* ── Static edges (root → topics) ──────────────────────────── */}
+            {/* Root → topic edges: animate path changes on layout shift */}
             {staticEdges.map((e) => (
-              <g key={e.id}>
-                {/* invisible wide hit area so clicking the edge also toggles */}
-                <line
-                  x1={e.sx} y1={e.sy} x2={e.tx} y2={e.ty}
-                  stroke="transparent" strokeWidth={18}
-                  style={{ cursor: "pointer" }}
-                  onClick={() => toggle(e.topicId)}
-                />
-                <line
-                  x1={e.sx} y1={e.sy} x2={e.tx} y2={e.ty}
-                  stroke={e.color} strokeWidth={2} strokeOpacity={0.45}
-                  markerEnd={`url(#arr-${e.color.replace("#","")})`}
-                />
-              </g>
+              <motion.path
+                key={e.id}
+                initial={false}
+                animate={{ d: e.path } as never}
+                transition={{ type: "tween", duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
+                stroke={e.col} strokeWidth={1.5} strokeOpacity={0.4} fill="none"
+              />
             ))}
 
-            {/* ── Dynamic edges (topic → subtopics, animate in/out) ──────── */}
+            {/* Topic → subtopic edges */}
             <AnimatePresence>
               {dynamicEdges.map((e) => (
                 <motion.path
                   key={e.id}
-                  d={`M ${e.sx} ${e.sy} L ${e.tx} ${e.ty}`}
-                  stroke={e.color} strokeWidth={1.5} strokeOpacity={0.35}
-                  fill="none"
+                  d={e.path}
+                  stroke={e.col} strokeWidth={1.5} strokeOpacity={0.35} fill="none"
                   initial={{ pathLength: 0, opacity: 0 }}
                   animate={{ pathLength: 1, opacity: 1 }}
-                  exit={{ pathLength: 0, opacity: 0 }}
-                  transition={{ duration: 0.3, ease: "easeOut" }}
+                  exit={{    pathLength: 0, opacity: 0 }}
+                  transition={{ duration: 0.28, ease: "easeOut" }}
                 />
               ))}
             </AnimatePresence>
 
-            {/* ── Static nodes (root + all topics — always visible) ────────── */}
+            {/* Root + topic nodes — CSS transition handles repositioning */}
             {staticNodes.map((n) => (
-              <motion.g
+              <g
                 key={n.id}
-                animate={{ x: n.x, y: n.y }}
-                transition={spring}
+                style={{
+                  transform: `translate(${n.x}px, ${n.y}px)`,
+                  transition: "transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                }}
               >
-                <MapNode n={n} expanded={expanded.has(n.id)} onToggle={toggle} />
-              </motion.g>
+                <MapNode n={n} onToggle={toggle}/>
+              </g>
             ))}
 
-            {/* ── Dynamic nodes (subtopics — animate in from parent) ────────── */}
+            {/* Subtopic nodes — fade + scale in/out */}
             <AnimatePresence>
-              {dynamicNodes.map((n) => (
-                <motion.g
+              {dynNodes.map((n) => (
+                <g
                   key={n.id}
-                  initial={{ opacity: 0, scale: 0.35, x: n.px, y: n.py }}
-                  animate={{ opacity: 1, scale: 1,   x: n.x,  y: n.y  }}
-                  exit={{    opacity: 0, scale: 0.35, x: n.px, y: n.py }}
-                  transition={spring}
+                  style={{ transform: `translate(${n.x}px, ${n.y}px)` }}
                 >
-                  <MapNode n={n} expanded={false} onToggle={toggle} />
-                </motion.g>
+                  <motion.g
+                    style={{ transformBox: "fill-box", transformOrigin: "50% 50%" } as React.CSSProperties}
+                    initial={{ opacity: 0, scale: 0.65 }}
+                    animate={{ opacity: 1, scale: 1   }}
+                    exit={{    opacity: 0, scale: 0.65 }}
+                    transition={spring}
+                  >
+                    <MapNode n={n} onToggle={toggle}/>
+                  </motion.g>
+                </g>
               ))}
             </AnimatePresence>
           </svg>

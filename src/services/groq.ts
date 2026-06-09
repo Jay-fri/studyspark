@@ -233,15 +233,65 @@ export async function generateFlashcards(
   });
 }
 
+/** Recursively normalise a raw AI node (handles "name" vs "label", missing ids, etc.) */
+function normMindMapNode(
+  raw: Record<string, unknown>,
+  idPrefix = "n",
+  idx = 0,
+): MindMapNode {
+  const label = (raw.label ?? raw.name ?? raw.title ?? raw.topic ?? "Untitled") as string;
+  const id    = (raw.id   ?? `${idPrefix}-${idx}`) as string;
+  const kids  = (raw.children ?? raw.subtopics ?? raw.topics ?? raw.nodes ?? []) as Record<string, unknown>[];
+  return {
+    id,
+    label: String(label),
+    children: Array.isArray(kids)
+      ? kids.map((k, i) => normMindMapNode(k as Record<string, unknown>, id, i))
+      : [],
+  };
+}
+
 export async function generateMindMap(sourceText: string, signal?: AbortSignal): Promise<MindMapNode> {
   const raw = await groqComplete(
     [
-      { role: "system", content: `Create a hierarchical mind map as JSON. Keep it 3 levels deep max (root → topics → subtopics). Format: {"root":{"id":"root","label":"Main Topic","children":[{"id":"t1","label":"Topic 1","children":[{"id":"t1a","label":"Subtopic"}]}]}}` },
-      { role: "user",   content: sampleDocument(sourceText, 8000) },
+      {
+        role: "system",
+        content: [
+          "You are a mind-map generator. Return ONLY valid JSON — no markdown, no explanation.",
+          'Required format: {"root":{"id":"root","label":"<main topic>","children":[{"id":"t1","label":"<topic>","children":[{"id":"t1a","label":"<subtopic>"}]}]}}',
+          "Rules: 5-8 top-level topics, 2-4 subtopics each. IDs must be unique strings. Labels must be short (1-5 words).",
+        ].join(" "),
+      },
+      { role: "user", content: sampleDocument(sourceText, 8000) },
     ],
     GROQ_MODELS.powerful, true, signal
   );
-  return safeParseJSON<{ root: MindMapNode }>(raw).root;
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = safeParseJSON<Record<string, unknown>>(raw);
+  } catch {
+    console.error("[generateMindMap] JSON parse failed. Raw:", raw);
+    throw new Error("Mind map generation returned invalid JSON — please try again");
+  }
+
+  // Try the expected { root: {...} } shape first, then fall back to treating
+  // the top-level object itself as the root node.
+  const rootRaw =
+    (parsed.root as Record<string, unknown> | undefined) ??
+    (parsed as Record<string, unknown>);
+
+  try {
+    const node = normMindMapNode(rootRaw, "root", 0);
+    if (!node.label || node.label === "Untitled") {
+      console.error("[generateMindMap] Root label missing. Parsed:", parsed);
+      throw new Error("Root label missing");
+    }
+    return node;
+  } catch (e) {
+    console.error("[generateMindMap] Normalisation failed:", e, "Parsed:", parsed);
+    throw new Error("Mind map generation returned invalid structure — please try again");
+  }
 }
 
 export async function generateStudyGuide(sourceText: string, signal?: AbortSignal): Promise<StudyGuideSection[]> {

@@ -4,59 +4,59 @@
 
 /* ─── StudyLM Design System v2 ──────────────────────────────────────── */
 @layer base {
-
   /* ── Light mode (default) ─────────────────────────────────────────── */
   :root {
-    --brand-primary:   #F97316;
-    --brand-secondary: #EA6B0A;
-    --brand-accent:    #10B981;
-    --brand-warning:   #F59E0B;
-    --brand-danger:    #EF4444;
+    --brand-primary: #38e0c3;
+    --brand-secondary: #2cc4a9;
+    --brand-accent: #63b3ff;
+    --brand-warning: #f59e0b;
+    --brand-danger: #ef4444;
 
-    --surface-0: #FAFAFA;
-    --surface-1: #FFFFFF;
-    --surface-2: #F4F4F5;
-    --surface-3: #EFEFEF;
+    --surface-0: #fafafa;
+    --surface-1: #ffffff;
+    --surface-2: #f4f4f5;
+    --surface-3: #efefef;
 
-    --border:        #E5E5E7;
-    --border-subtle: #F0F0F1;
+    --border: #e5e5e7;
+    --border-subtle: #f0f0f1;
 
-    --text-primary:   #111113;
-    --text-secondary: #3D3D47;
-    --text-muted:     #6B6B72;
-    --text-dim:       #9B9BA2;
+    --text-primary: #111113;
+    --text-secondary: #3d3d47;
+    --text-muted: #6b6b72;
+    --text-dim: #dcdce1;
 
-    --orange-bg: #FFF4ED;
+    --orange-bg: #fff4ed;
 
-    --radius:    12px;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
-    --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
-    --shadow-lg: 0 12px 40px rgba(0,0,0,0.12);
+    --radius: 12px;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12);
   }
 
   /* ── Dark mode ────────────────────────────────────────────────────── */
   .dark {
-    --brand-primary:   #F97316;
-    --brand-secondary: #EA6B0A;
+    --brand-primary: #38e0c3;
+    --brand-secondary: #2cc4a9;
+    --brand-accent: #63b3ff;
 
-    --surface-0: #0E0E0F;
-    --surface-1: #111113;
-    --surface-2: #1A1A1D;
-    --surface-3: #1F1F22;
+    --surface-0: #0a1628;
+    --surface-1: #0c1b2e;
+    --surface-2: #0f2039;
+    --surface-3: #132640;
 
-    --border:        #2A2A2D;
-    --border-subtle: #1E1E21;
+    --border: rgba(255, 255, 255, 0.1);
+    --border-subtle: rgba(255, 255, 255, 0.06);
 
-    --text-primary:   #F5F5F4;
-    --text-secondary: #C4C4CC;
-    --text-muted:     #6B6B72;
-    --text-dim:       #4B4B52;
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.75);
+    --text-muted: rgba(255, 255, 255, 0.4);
+    --text-dim: rgba(235, 229, 229, 0.519);
 
-    --orange-bg: #1F1208;
+    --orange-bg: #1f1208;
 
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
-    --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
-    --shadow-lg: 0 12px 40px rgba(0,0,0,0.6);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.6);
   }
 
   * {
@@ -75,12 +75,9 @@
     min-height: 100dvh;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-display tracking-tight;
-  }
-
   /* Density tokens */
-  :root, [data-density="comfortable"] {
+  :root,
+  [data-density="comfortable"] {
     --space-1: 0.25rem;
     --space-2: 0.5rem;
     --space-3: 0.75rem;
@@ -112,11 +109,19 @@
   }
 
   .gradient-brand {
-    background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+    background: linear-gradient(
+      135deg,
+      var(--brand-primary) 0%,
+      var(--brand-secondary) 100%
+    );
   }
 
   .gradient-text {
-    background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+    background: linear-gradient(
+      135deg,
+      var(--brand-primary),
+      var(--brand-secondary)
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -127,8 +132,12 @@
     scrollbar-color: var(--border) transparent;
   }
 
-  .scrollbar-thin::-webkit-scrollbar { width: 4px; }
-  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: var(--border);
     border-radius: 9999px;
@@ -137,18 +146,29 @@
   .scrollbar-none {
     scrollbar-width: none;
   }
-  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* ─── Chat streaming animations ─────────────────────────────────────── */
 @keyframes chat-fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes cursor-blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 .chat-chunk {

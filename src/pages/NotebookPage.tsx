@@ -104,17 +104,19 @@ export default function NotebookPage() {
     setActiveOutput,
   } = useNotebookStore();
 
-  const { data: notebooks } = useNotebooks();
+  const { data: notebooks, isLoading: notebooksLoading } = useNotebooks();
   useNotebookSources(notebookId);
   useAIOutputs(notebookId);
   const { generate, cancel } = useAIGenerate(notebookId);
 
   useEffect(() => {
-    if (!notebooks || !notebookId) return;
+    // Don't redirect until the query has finished — the notebook may simply
+    // not be in cache yet (e.g., just created and navigated directly to it).
+    if (notebooksLoading || !notebooks || !notebookId) return;
     const nb = notebooks.find((n) => n.id === notebookId);
     if (!nb) { navigate("/notebooks"); return; }
     if (nb.id !== activeNotebook?.id) setActiveNotebook(nb);
-  }, [notebookId, notebooks, activeNotebook?.id, setActiveNotebook, navigate]);
+  }, [notebookId, notebooks, notebooksLoading, activeNotebook?.id, setActiveNotebook, navigate]);
 
   // ── Restore modal after outputs load ────────────────────────────────────
   useEffect(() => {

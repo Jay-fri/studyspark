@@ -692,7 +692,7 @@ export default function NotebooksPage() {
             title="New Notebook"
             onClose={() => setShowCreate(false)}
             onSave={data => createNotebook.mutateAsync({ ...data }).then(nb => {
-              navigate(`/notebooks/${nb.id}`);
+              if (nb?.id) navigate(`/notebooks/${nb.id}`);
             })}
           />
         )}

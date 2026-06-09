@@ -3,6 +3,7 @@ import { useDropzone } from "react-dropzone";
 import { motion } from "framer-motion";
 import { X, Upload, FileText, Type, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { useUploadSource, type UploadProgress } from "@/hooks/useUploadSource";
+import { Portal } from "@/components/shared/Portal";
 import { cn } from "@/lib/utils";
 
 const ACCEPTED_TYPES: Record<string, string[]> = {
@@ -90,6 +91,7 @@ export function UploadModal({ notebookId, onClose, onDone }: Props) {
   };
 
   return (
+    <Portal>
     <motion.div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       initial={{ opacity: 0 }}
@@ -220,5 +222,6 @@ export function UploadModal({ notebookId, onClose, onDone }: Props) {
         </div>
       </motion.div>
     </motion.div>
+    </Portal>
   );
 }

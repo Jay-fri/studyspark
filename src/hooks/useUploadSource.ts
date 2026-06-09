@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/services/supabase";
 import { extractTextFromFile, countWords } from "@/services/fileParser";
 import { useAuthStore } from "@/stores/authStore";
@@ -34,6 +35,7 @@ async function edgeHeaders(): Promise<HeadersInit> {
 export function useUploadSource(notebookId: string) {
   const [progress, setProgress] = useState<UploadProgress | null>(null);
   const userId      = useAuthStore((s) => s.user?.id);
+  const qc          = useQueryClient();
   const { addSource, updateSource } = useNotebookStore();
 
   const uploadFile = useCallback(async (file: File): Promise<Source | null> => {
@@ -104,6 +106,7 @@ export function useUploadSource(notebookId: string) {
 
       const source = data as Source;
       addSource(source);
+      qc.invalidateQueries({ queryKey: ["sources", notebookId] });
 
       setProgress({ filename: file.name, stage: "processing", percent: 80 });
 
@@ -120,6 +123,7 @@ export function useUploadSource(notebookId: string) {
         updateSource({ ...source, processing_status: "error" });
       } else {
         updateSource({ ...source, processing_status: "ready" });
+        qc.invalidateQueries({ queryKey: ["sources", notebookId] });
       }
 
       setProgress({ filename: file.name, stage: "done", percent: 100 });
@@ -157,6 +161,7 @@ export function useUploadSource(notebookId: string) {
 
       const source = data as Source;
       addSource(source);
+      qc.invalidateQueries({ queryKey: ["sources", notebookId] });
 
       setProgress({ filename: title, stage: "processing", percent: 75 });
 

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, RefreshCw, Loader2, Zap } from "lucide-react";
 import { OutputViewer } from "./OutputViewer";
 import { useTokenCosts } from "@/hooks/useTokenCosts";
+import { Portal } from "@/components/shared/Portal";
 import { cn } from "@/lib/utils";
 import type { AIOutput, AIOutputType } from "@/types";
 
@@ -48,6 +49,7 @@ export function OutputModal({
   const isMindMap = type === "mindmap";
 
   return (
+    <Portal>
     <AnimatePresence>
       {open && (
         <>
@@ -167,5 +169,6 @@ export function OutputModal({
         </>
       )}
     </AnimatePresence>
+    </Portal>
   );
 }

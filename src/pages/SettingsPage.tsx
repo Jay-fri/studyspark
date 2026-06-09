@@ -416,7 +416,7 @@ function TokensTab() {
       {/* Balance + top up */}
       <div className="flex items-center gap-4 p-5 bg-[var(--surface-1)] border border-[var(--border)] rounded-2xl">
         <div className="flex-1">
-          <p className="text-3xl font-display text-[var(--brand-primary)]">
+          <p className="text-3xl font-bold text-[var(--brand-primary)]">
             {(profile?.study_tokens ?? 0).toLocaleString()}
           </p>
           <p className="text-xs text-[var(--text-muted)] mt-0.5">tokens available</p>
@@ -588,7 +588,7 @@ export default function SettingsPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-6"
       >
-        <h1 className="text-2xl font-display text-[var(--text-primary)]">Settings</h1>
+        <h1 className="text-2xl font-semibold text-[var(--text-primary)]">Settings</h1>
         <p className="text-sm text-[var(--text-muted)] mt-0.5">Manage your account and preferences</p>
       </motion.div>
 

@@ -40,7 +40,8 @@ export function StudioPanel({
   const [hoveredType, setHoveredType] = useState<AIOutputType | null>(null);
   const costs = useTokenCosts();
 
-  const getOutput = (type: AIOutputType) => outputs.find((o) => o.type === type) ?? null;
+  const safeOutputs = outputs ?? [];
+  const getOutput = (type: AIOutputType) => safeOutputs.find((o) => o.type === type) ?? null;
 
   // ── Icon-only collapsed view ─────────────────────────────────────────
   if (collapsed) {
@@ -190,13 +191,13 @@ export function StudioPanel({
         </div>
 
         {/* ── Generated section ── */}
-        {outputs.length > 0 && (
+        {safeOutputs.length > 0 && (
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)] mb-2 px-1">
               Generated
             </p>
             <div className="space-y-1.5">
-              {outputs.map((output) => {
+              {safeOutputs.map((output) => {
                 const meta  = STUDIO_ITEMS.find((s) => s.type === output.type);
                 const isNow = isGenerating && generatingType === output.type;
                 return (
@@ -225,7 +226,7 @@ export function StudioPanel({
         )}
 
         {/* Empty state */}
-        {outputs.length === 0 && (
+        {safeOutputs.length === 0 && (
           <div className="text-center py-8 px-4">
             <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
               Click any card above to generate AI study materials from your sources.

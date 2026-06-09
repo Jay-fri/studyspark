@@ -330,7 +330,7 @@ export function ChatPanel({ notebookId }: Props) {
 
               <div className={cn("flex items-center gap-2", msg.role === "user" ? "justify-end" : "justify-start")}>
                 <span className="text-[10px] text-[var(--text-muted)]">
-                  {format(new Date(msg.created_at), "h:mm a")}
+                  {msg.created_at ? format(new Date(msg.created_at), "h:mm a") : ""}
                 </span>
                 {msg.role === "assistant" && msg.content && (
                   <>

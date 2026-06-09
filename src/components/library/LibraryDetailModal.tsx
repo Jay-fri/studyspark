@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ExternalLink, Download } from "lucide-react";
+import { Portal } from "@/components/shared/Portal";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import type { AIOutput, AIOutputContent, Notebook } from "@/types";
@@ -62,6 +63,7 @@ export function LibraryDetailModal({ output, notebook, onClose }: Props) {
   const canExport = output && ["quiz","flashcards","summary","studyguide"].includes(output.type);
 
   return (
+    <Portal>
     <AnimatePresence>
       {output && (
         <>
@@ -134,5 +136,6 @@ export function LibraryDetailModal({ output, notebook, onClose }: Props) {
         </>
       )}
     </AnimatePresence>
+    </Portal>
   );
 }
