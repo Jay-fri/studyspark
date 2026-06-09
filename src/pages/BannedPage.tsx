@@ -8,7 +8,7 @@ import { useAuthStore } from "@/stores/authStore";
 const LOGOUT_SECONDS = 300;
 
 export default function BannedPage() {
-  const { user, profile } = useAuthStore();
+  const { profile } = useAuthStore();
   const [countdown, setCountdown] = useState(LOGOUT_SECONDS);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
