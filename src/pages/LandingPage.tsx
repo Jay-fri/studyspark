@@ -617,7 +617,7 @@ function CTA() {
                 Ready to study smarter?
               </h2>
               <p className="text-indigo-100 mb-8 text-lg">
-                Join thousands of Nigerian students who are already acing their
+                Join thousands of students worldwide who are already acing their
                 exams with AI.
               </p>
               <Link
@@ -649,8 +649,8 @@ function Footer() {
           <span className="font-display text-text-primary">StudyLM</span>
         </div>
         <p className="text-xs text-text-muted text-center">
-          © {new Date().getFullYear()} StudyLM. Built for Nigerian university
-          students. 🇳🇬
+          © {new Date().getFullYear()} StudyLM. Built for university students
+          worldwide students. 🇳🇬
         </p>
         <div className="flex items-center gap-5 text-xs text-text-muted">
           <Link
