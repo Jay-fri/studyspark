@@ -1,33 +1,101 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { supabase } from "@/services/supabase";
+import { useAuthStore } from "@/stores/authStore";
+import toast from "react-hot-toast";
 
-// This page exists as a fallback for redirect-based Flutterwave flows (e.g. 3DS cards).
-// Standard inline payments (card, USSD, bank transfer) are handled entirely by the
-// callback in useFlutterwave — they never land here.
-// If someone navigates here directly (no params), silently redirect to dashboard.
+// Handles redirect-based Flutterwave flows (e.g. 3DS cards).
+// Inline payments (card popup, USSD, bank transfer) never land here.
 export default function PaymentCallbackPage() {
   const [params] = useSearchParams();
-  const navigate  = useNavigate();
-
-  const status        = params.get("status");
-  const transactionId = params.get("transaction_id");
-  const txRef         = params.get("tx_ref");
+  const navigate = useNavigate();
+  const profile = useAuthStore((s) => s.profile);
+  const refreshProfile = useAuthStore((s) => s.refreshProfile);
+  const didRun = useRef(false);
 
   useEffect(() => {
-    // No Flutterwave params → direct navigation; go to dashboard
+    if (didRun.current) return;
+    didRun.current = true;
+
+    const status        = params.get("status");
+    const transactionId = params.get("transaction_id");
+    const txRef         = params.get("tx_ref");
+
+    // No Flutterwave params → direct navigation
     if (!status || !transactionId || !txRef) {
       navigate("/dashboard", { replace: true });
       return;
     }
 
-    // Params present → redirect to dashboard with a query flag so the app
-    // can show a toast once the user arrives (handled in DashboardPage).
-    if (status === "successful") {
-      navigate(`/dashboard?payment=success`, { replace: true });
-    } else {
-      navigate(`/dashboard?payment=${status}`, { replace: true });
+    if (status !== "successful") {
+      toast.error(status === "cancelled" ? "Payment cancelled" : "Payment failed — please try again");
+      navigate("/dashboard", { replace: true });
+      return;
     }
+
+    if (!profile) {
+      navigate("/dashboard", { replace: true });
+      return;
+    }
+
+    // Derive tokens from sessionStorage intent set before the widget opened
+    const intentRaw = txRef ? sessionStorage.getItem(`flw_intent_${txRef}`) : null;
+    const intent    = intentRaw ? JSON.parse(intentRaw) as { amountNgn: number; tokens: number } : null;
+
+    if (!intent) {
+      // No intent found — could be a stale redirect; go to dashboard
+      navigate("/dashboard", { replace: true });
+      return;
+    }
+
+    sessionStorage.removeItem(`flw_intent_${txRef}`);
+
+    const verify = async () => {
+      const verifyToast = toast.loading("Verifying payment…");
+      try {
+        const { data, error } = await supabase.functions.invoke("verify-payment", {
+          body: {
+            transaction_id:  Number(transactionId),
+            flutterwave_ref: txRef,
+            user_id:         profile.id,
+            expected_amount: intent.amountNgn,
+            tokens:          intent.tokens,
+          },
+        });
+
+        const result = data as { success?: boolean; error?: string; new_balance?: number } | null;
+
+        if (error || !result?.success) {
+          toast.error(
+            result?.error ?? error?.message ?? "Token credit failed — contact support",
+            { id: verifyToast }
+          );
+          navigate("/dashboard", { replace: true });
+          return;
+        }
+
+        if (result.new_balance != null) {
+          refreshProfile({ ...profile, study_tokens: result.new_balance });
+        } else {
+          const { data: fresh } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", profile.id)
+            .single();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          if (fresh) refreshProfile(fresh as any);
+        }
+
+        toast.success(`${intent.tokens.toLocaleString()} tokens added!`, { id: verifyToast });
+        navigate("/dashboard", { replace: true });
+      } catch {
+        toast.error("Verification failed — contact support", { id: verifyToast });
+        navigate("/dashboard", { replace: true });
+      }
+    };
+
+    verify();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

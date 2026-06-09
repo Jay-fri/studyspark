@@ -34,8 +34,8 @@ export function PaymentModal() {
 
   const handlePurchase = async () => {
     const pkg = TOKEN_PACKAGES[selected];
-    await topUp(pkg.price_ngn, pkg.tokens);
-    setPaymentModalOpen(false);
+    const ok = await topUp(pkg.price_ngn, pkg.tokens);
+    if (ok) setPaymentModalOpen(false);
   };
 
   const pkg = TOKEN_PACKAGES[selected];

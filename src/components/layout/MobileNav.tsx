@@ -7,7 +7,7 @@ import { useNotebookStore } from "@/stores/notebookStore";
 const tabs = [
   { to: "/dashboard",      icon: LayoutDashboard, label: "Home",      isFab: false },
   { to: "/notebooks",      icon: BookMarked,       label: "Notebooks", isFab: false },
-  { to: "/notebooks",       icon: Plus,             label: "New",       isFab: true  },
+  { to: "/notebooks?create=1", icon: Plus,             label: "New",       isFab: true  },
   { to: "/library",        icon: Library,          label: "Library",   isFab: false },
   { to: "/settings",       icon: User,             label: "Profile",   isFab: false },
 ] as const;
@@ -39,12 +39,12 @@ export function MobileNav() {
 
         {tabs.map(({ to, icon: Icon, label, isFab }, i) => {
           const isActive    = activeIdx === i;
-          const hasLibBadge = to === "/library" && aiOutputs.length > 0;
+          const hasLibBadge = to.startsWith("/library") && aiOutputs.length > 0;
 
           if (isFab) {
             return (
               <NavLink
-                key={to}
+                key={i}
                 to={to}
                 className="flex-1 flex flex-col items-center justify-center gap-1 relative z-10"
               >
@@ -66,7 +66,7 @@ export function MobileNav() {
 
           return (
             <NavLink
-              key={to}
+              key={i}
               to={to}
               className={cn(
                 "flex-1 flex flex-col items-center justify-center gap-1 relative z-10 transition-colors",

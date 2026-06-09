@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Loader2, X, Search,
@@ -399,7 +399,8 @@ type ViewMode = "grid" | "list";
 
 export default function NotebooksPage() {
   const navigate = useNavigate();
-  const [showCreate,   setShowCreate]   = useState(false);
+  const [searchParams] = useSearchParams();
+  const [showCreate,   setShowCreate]   = useState(() => searchParams.get("create") === "1");
   const [renamingNb,   setRenamingNb]   = useState<Notebook | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [search,       setSearch]       = useState("");

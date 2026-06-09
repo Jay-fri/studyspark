@@ -12,25 +12,15 @@ interface FlutterwaveConfig {
   amount:          number;
   currency:        string;
   payment_options: string;
-  customer: {
-    email: string;
-    name:  string;
-  };
-  customizations: {
-    title:       string;
-    description: string;
-    logo?:       string;
-  };
-  meta: {
-    user_id: string;
-    tokens:  number;
-  };
-  callback:      (response: FlutterwaveResponse) => void;
-  onclose:       () => void;
+  customer:        { email: string; name: string };
+  customizations:  { title: string; description: string };
+  meta:            { user_id: string; tokens: number };
+  callback:        (response: FlutterwaveResponse) => void;
+  onclose:         () => void;
 }
 
 export interface FlutterwaveResponse {
-  status:         "successful" | "cancelled" | "failed";
+  status:         string; // "successful" | "completed" | "complete" | "cancelled" | "failed"
   transaction_id: number;
   tx_ref:         string;
   flw_ref:        string;
@@ -38,30 +28,37 @@ export interface FlutterwaveResponse {
   currency:       string;
 }
 
-export function loadFlutterwaveScript(): Promise<void> {
+const SUCCESS = new Set(["successful", "completed", "complete"]);
+export const isSuccessful = (r: FlutterwaveResponse) => SUCCESS.has(r.status?.toLowerCase());
+
+function loadScript(): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (window.FlutterwaveCheckout) { resolve(); return; }
-    const script   = document.createElement("script");
-    script.src     = "https://checkout.flutterwave.com/v3.js";
-    script.onload  = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Flutterwave script"));
-    document.head.appendChild(script);
+    if (window.FlutterwaveCheckout) return resolve();
+    const s    = document.createElement("script");
+    s.src      = "https://checkout.flutterwave.com/v3.js";
+    s.onload   = () => resolve();
+    s.onerror  = () => reject(new Error("Failed to load Flutterwave script"));
+    document.head.appendChild(s);
   });
 }
 
-export async function initializePayment(
-  profile: Profile,
+export async function openFlutterwaveCheckout(
+  profile:   Profile,
   amountNgn: number,
-  tokens: number,
+  tokens:    number,
   onSuccess: (response: FlutterwaveResponse) => void,
-  onClose: () => void
+  onClose:   () => void,
 ): Promise<void> {
-  await loadFlutterwaveScript();
+  await loadScript();
 
   const publicKey = import.meta.env.VITE_FLUTTERWAVE_PUBLIC_KEY;
   if (!publicKey) throw new Error("Missing VITE_FLUTTERWAVE_PUBLIC_KEY");
 
-  const txRef = `STUDYLM-${profile.id}-${Date.now()}`;
+  const shortId = profile.id.replace(/-/g, "").slice(0, 12);
+  const txRef   = `SLM-${shortId}-${Date.now()}`;
+
+  // Store intent for redirect-based flows (3DS)
+  sessionStorage.setItem(`flw_${txRef}`, JSON.stringify({ amountNgn, tokens }));
 
   window.FlutterwaveCheckout!({
     public_key:      publicKey,
@@ -69,16 +66,10 @@ export async function initializePayment(
     amount:          amountNgn,
     currency:        "NGN",
     payment_options: "card,ussd,banktransfer",
-    customer: {
-      email: profile.email,
-      name:  profile.full_name ?? profile.email,
-    },
-    customizations: {
-      title:       "StudyLM Token Top-up",
-      description: "Purchase study tokens",
-    },
-    meta:     { user_id: profile.id, tokens },
-    callback: onSuccess,
-    onclose:  onClose,
+    customer:        { email: profile.email, name: profile.full_name ?? profile.email },
+    customizations:  { title: "StudyLM Tokens", description: "Purchase study tokens" },
+    meta:            { user_id: profile.id, tokens },
+    callback:        onSuccess,
+    onclose:         onClose,
   });
 }

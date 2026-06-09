@@ -1,37 +1,37 @@
 import { useState } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/services/supabase";
-import { initializePayment } from "@/services/flutterwave";
+import { openFlutterwaveCheckout, isSuccessful } from "@/services/flutterwave";
 import type { FlutterwaveResponse } from "@/services/flutterwave";
 import toast from "react-hot-toast";
 
 export function useFlutterwave() {
   const [isLoading, setIsLoading] = useState(false);
-  const profile = useAuthStore((s) => s.profile);
-  const { refreshProfile } = useAuthStore();
+  const profile        = useAuthStore((s) => s.profile);
+  const refreshProfile = useAuthStore((s) => s.refreshProfile);
 
-  const topUp = async (amountNgn: number, tokensToAdd: number) => {
-    if (!profile) throw new Error("Not authenticated");
+  const topUp = (amountNgn: number, tokensToAdd: number): Promise<boolean> => {
+    if (!profile) return Promise.resolve(false);
     setIsLoading(true);
 
-    try {
-      await initializePayment(
+    return new Promise((resolve) => {
+      let callbackFired = false;
+
+      openFlutterwaveCheckout(
         profile,
         amountNgn,
         tokensToAdd,
         async (response: FlutterwaveResponse) => {
-          if (response.status !== "successful") {
-            toast.error(
-              response.status === "cancelled"
-                ? "Payment cancelled"
-                : "Payment was not completed — please try again"
-            );
+          callbackFired = true;
+
+          if (!isSuccessful(response)) {
+            toast.error(response.status === "cancelled" ? "Payment cancelled" : "Payment failed — please try again");
             setIsLoading(false);
+            resolve(false);
             return;
           }
 
-          const verifyToast = toast.loading("Verifying payment…");
-
+          const tid = toast.loading("Verifying payment…");
           try {
             const { data, error } = await supabase.functions.invoke("verify-payment", {
               body: {
@@ -43,36 +43,35 @@ export function useFlutterwave() {
               },
             });
 
-            if (error || !(data as { success?: boolean } | null)?.success) {
-              const msg = (data as { error?: string } | null)?.error
-                ?? error?.message
-                ?? "Token credit failed — contact support";
-              toast.error(msg, { id: verifyToast });
-              setIsLoading(false);
-              return;
-            }
+            if (error) throw error;
 
-            const { data: fresh } = await supabase
-              .from("profiles")
-              .select("*")
-              .eq("id", profile.id)
-              .single();
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            if (fresh) refreshProfile(fresh as any);
+            const result = data as { success: boolean; new_balance: number };
+            if (!result?.success) throw new Error("Verification returned no success");
 
-            toast.success(`${tokensToAdd.toLocaleString()} tokens added!`, { id: verifyToast });
-          } catch {
-            toast.error("Token verification failed — contact support", { id: verifyToast });
+            refreshProfile({ ...profile, study_tokens: result.new_balance });
+            toast.success(`${tokensToAdd.toLocaleString()} tokens added!`, { id: tid });
+            setIsLoading(false);
+            resolve(true);
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : "Token credit failed — contact support";
+            console.error("[payment] verify failed:", err);
+            toast.error(msg, { id: tid });
+            setIsLoading(false);
+            resolve(false);
           }
-
-          setIsLoading(false);
         },
-        () => setIsLoading(false),
-      );
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Payment initialisation failed");
-      setIsLoading(false);
-    }
+        () => {
+          if (!callbackFired) {
+            setIsLoading(false);
+            resolve(false);
+          }
+        },
+      ).catch((err) => {
+        toast.error(err instanceof Error ? err.message : "Payment failed to open");
+        setIsLoading(false);
+        resolve(false);
+      });
+    });
   };
 
   return { topUp, isLoading };
