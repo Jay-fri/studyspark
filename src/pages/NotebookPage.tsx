@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from "react-resizable-panels";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import { AnimatePresence, motion } from "framer-motion";
-import { BookOpen, MessageSquare, Sparkles, Plus, ArrowLeft } from "lucide-react";
+import { BookOpen, MessageSquare, Sparkles, Plus, ArrowLeft } from "@/lib/icons";
 import toast from "react-hot-toast";
 
 import { useNotebookStore } from "@/stores/notebookStore";

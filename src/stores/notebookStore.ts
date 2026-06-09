@@ -56,17 +56,27 @@ export const useNotebookStore = create<NotebookState>()((set, get) => ({
   addNotebook:       (nb)               => set((s) => ({ notebooks: [nb, ...s.notebooks] })),
   updateNotebook:    (nb)               => set((s) => ({ notebooks: s.notebooks.map((n) => n.id === nb.id ? nb : n) })),
   removeNotebook:    (id)               => set((s) => ({ notebooks: s.notebooks.filter((n) => n.id !== id) })),
-  setActiveNotebook: (activeNotebook) => set({
-    activeNotebook,
-    // Clear per-notebook data so stale content from the previous notebook never
-    // shows while new data loads. Query hooks re-populate via their useEffect.
-    sources:           [],
-    aiOutputs:         [],
-    chatMessages:      [],
-    selectedSourceIds: "all",
-    activeOutputType:  null,
-    starterQuestions:  [],
-  }),
+  setActiveNotebook: (activeNotebook) => {
+    const currentId = get().activeNotebook?.id;
+    const newId     = activeNotebook?.id;
+    // Only wipe per-notebook data when genuinely switching between two different
+    // notebooks. On first activation (reload or initial entry) currentId is null —
+    // don't clear, because the query hooks may have already populated the store.
+    const isSwitching = currentId != null && currentId !== newId;
+    if (isSwitching) {
+      set({
+        activeNotebook,
+        sources:           [],
+        aiOutputs:         [],
+        chatMessages:      [],
+        selectedSourceIds: "all",
+        activeOutputType:  null,
+        starterQuestions:  [],
+      });
+    } else {
+      set({ activeNotebook });
+    }
+  },
 
   setSources:   (sources)  => set({ sources }),
   addSource:    (source)   => set((s) => ({ sources: [source, ...s.sources] })),

@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export type Density  = "compact" | "comfortable";
-export type FontSize = "small" | "medium" | "large";
+export type FontSize = "small" | "medium" | "large" | "xl" | "xxl";
 
 interface UIState {
   sidebarOpen:             boolean;
@@ -38,7 +38,7 @@ export const useUIStore = create<UIState>()(
       sidebarCollapsed:       false,
       theme:                  "system",
       density:                "comfortable",
-      fontSize:               "medium",
+      fontSize:               "large",
       emailNotifications:     true,
       lowTokenWarnings:       true,
       tokenBannerDismissedAt: null,
@@ -61,6 +61,13 @@ export const useUIStore = create<UIState>()(
     }),
     {
       name: "studylm-ui",
+      version: 2,
+      migrate: (persisted: any, version: number) => {
+        if (version < 2 && persisted.fontSize === "medium") {
+          persisted.fontSize = "large";
+        }
+        return persisted;
+      },
       partialize: (s) => ({
         sidebarCollapsed:       s.sidebarCollapsed,
         theme:                  s.theme,

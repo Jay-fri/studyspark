@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ZoomIn, ZoomOut, RotateCcw, Download, Maximize2, Minimize2 } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCcw, Download, Maximize2, Minimize2 } from "@/lib/icons";
 import type { MindMapNode } from "@/types";
 
 // ── Colors ────────────────────────────────────────────────────────────────────

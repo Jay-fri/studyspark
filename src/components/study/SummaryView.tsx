@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Copy, Printer, Clock, BookOpen } from "lucide-react";
+import { Copy, Printer, Clock, BookOpen } from "@/lib/icons";
 import toast from "react-hot-toast";
 
 interface SummaryViewProps {

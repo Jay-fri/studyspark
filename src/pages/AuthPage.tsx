@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { getLastPath } from "@/components/auth/AuthGuard";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, Loader2, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, ArrowLeft, CheckCircle2 } from "@/lib/icons";
 import { useAuth } from "@/hooks/useAuth";
 import { NIGERIAN_UNIVERSITIES } from "@/types";
 import { cn } from "@/lib/utils";

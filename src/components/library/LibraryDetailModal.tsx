@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ExternalLink, Download } from "lucide-react";
+import { X, ExternalLink, Download } from "@/lib/icons";
 import { Portal } from "@/components/shared/Portal";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";

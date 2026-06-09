@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Printer, BookOpen } from "lucide-react";
+import { Printer, BookOpen } from "@/lib/icons";
 import type { StudyGuideSection } from "@/types";
 
 interface StudyGuideViewProps {

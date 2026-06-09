@@ -2,7 +2,7 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, Copy, RefreshCw, Zap, Sparkles, Loader2, Trash2 } from "lucide-react";
+import { Send, Copy, RefreshCw, Zap, Loader2, Trash2 } from "@/lib/icons";
 import { useGroq } from "@/hooks/useGroq";
 import { useNotebookStore } from "@/stores/notebookStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -41,9 +41,7 @@ function StreamingBubble({ content }: { content: string }) {
 // ─── Fallback starters ───────────────────────────────────────────────────────
 const FALLBACK_STARTERS = [
   "Summarise the key points from my sources",
-  "What are the main themes and concepts?",
   "Create 5 exam practice questions",
-  "Explain the most important topic in simple terms",
   "What should I focus on for my exam?",
 ];
 
@@ -221,15 +219,15 @@ export function ChatPanel({ notebookId }: Props) {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center h-full text-center py-12"
+            className="flex flex-col items-center justify-center h-full text-center pt-16 pb-12 px-4"
           >
-            <div className="w-14 h-14 rounded-2xl gradient-brand flex items-center justify-center mb-4 shadow-md">
-              <Sparkles className="w-7 h-7 text-white" />
+            <div className="w-14 h-14 rounded-2xl overflow-hidden mb-4 shrink-0" style={{ border: "0.5px solid rgba(56,224,195,0.2)" }}>
+              <img src="/logo.jpg" alt="StudyLM" className="w-full h-full object-cover" />
             </div>
             <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">
               {sources.length > 0 ? "Ask about your sources" : "Start a conversation"}
             </h3>
-            <p className="text-sm text-[var(--text-muted)] mb-6 max-w-sm">
+            <p className="text-sm text-[var(--text-muted)] mb-6 max-w-xs">
               {sources.length > 0
                 ? "I have access to all your uploaded sources. Ask me anything!"
                 : "Upload sources in the left panel to ground my answers in your material."}
@@ -239,22 +237,25 @@ export function ChatPanel({ notebookId }: Props) {
             {loadingStarters ? (
               <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Generating suggested questions…
+                Generating questions…
               </div>
             ) : (
               <AnimatePresence>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-lg">
-                  {starters.map((q, i) => (
+                <div className="flex flex-col gap-2 w-full max-w-sm">
+                  {starters.slice(0, 3).map((q, i) => (
                     <motion.button
                       key={q}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.05 }}
+                      transition={{ delay: i * 0.06 }}
                       onClick={() => {
                         if (balance < chatCost) { setPaymentModalOpen(true); return; }
                         chat(q, notebookId);
                       }}
-                      className="text-left px-4 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] text-xs text-[var(--text-secondary)] hover:border-[var(--brand-primary)]/40 hover:text-[var(--text-primary)] hover:bg-[var(--brand-primary)]/5 transition-all"
+                      className="text-left px-4 py-3 rounded-xl border text-xs text-[var(--text-secondary)] transition-all"
+                      style={{ background: "var(--surface-1)", borderColor: "var(--border)" }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(56,224,195,0.35)"; e.currentTarget.style.color = "var(--text-primary)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
                     >
                       {q}
                     </motion.button>
@@ -268,7 +269,7 @@ export function ChatPanel({ notebookId }: Props) {
                     className="mt-3 flex items-center gap-1.5 text-[11px] text-[var(--text-muted)] hover:text-[var(--brand-primary)] transition-colors"
                   >
                     <RefreshCw className="w-3 h-3" />
-                    Refresh suggestions · {chatCost} tokens
+                    Refresh · {chatCost} tokens
                   </button>
                 )}
               </AnimatePresence>
@@ -291,8 +292,8 @@ export function ChatPanel({ notebookId }: Props) {
             )}
           >
             {msg.role === "assistant" && (
-              <div className="w-7 h-7 rounded-full gradient-brand flex items-center justify-center shrink-0 mt-0.5">
-                <Sparkles className="w-3.5 h-3.5 text-white" />
+              <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 mt-0.5" style={{ border: "0.5px solid rgba(56,224,195,0.2)" }}>
+                <img src="/logo.jpg" alt="" className="w-full h-full object-cover" />
               </div>
             )}
 

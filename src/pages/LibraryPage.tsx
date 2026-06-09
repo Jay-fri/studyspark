@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Search, X, Loader2, LayoutGrid, List,
   Download, Trash2, ArrowUpRight, ChevronDown,
-} from "lucide-react";
+} from "@/lib/icons";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { supabase } from "@/services/supabase";

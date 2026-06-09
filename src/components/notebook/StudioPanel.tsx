@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
-import { Loader2, Zap, RefreshCw, ChevronRight, ChevronLeft } from "lucide-react";
+import { Loader2, Zap, RefreshCw, ChevronRight, ChevronLeft } from "@/lib/icons";
 import { useTokenCosts } from "@/hooks/useTokenCosts";
 import { cn } from "@/lib/utils";
 import type { AIOutput, AIOutputType } from "@/types";

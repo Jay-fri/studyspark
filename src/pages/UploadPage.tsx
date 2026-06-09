@@ -9,7 +9,7 @@ import {
   CheckCircle2,
   Loader2,
   AlertCircle,
-} from "lucide-react";
+} from "@/lib/icons";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { formatBytes, getFileExtension } from "@/lib/utils";
 import { cn } from "@/lib/utils";

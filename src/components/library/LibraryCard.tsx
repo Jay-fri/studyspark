@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { Trash2, Download, ArrowUpRight } from "lucide-react";
+import { Trash2, Download, ArrowUpRight } from "@/lib/icons";
 import type { AIOutput, AIOutputType, Notebook } from "@/types";
 
 export const TYPE_META: Record<AIOutputType, {

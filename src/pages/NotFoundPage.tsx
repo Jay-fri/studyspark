@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home } from "lucide-react";
+import { Home } from "@/lib/icons";
 
 export default function NotFoundPage() {
   return (

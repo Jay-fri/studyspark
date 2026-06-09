@@ -16,7 +16,7 @@ import {
   Zap,
   Sparkles,
   ChevronDown,
-} from "lucide-react";
+} from "@/lib/icons";
 import { TOKEN_PACKAGES } from "@/types";
 
 // ─── Animation variants ────────────────────────────────────────────────────

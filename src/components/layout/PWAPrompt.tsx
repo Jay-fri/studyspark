@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Download, X, Share, MoreVertical } from "lucide-react";
+import { Download, X, Share, MoreVertical } from "@/lib/icons";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
 
 function IOSInstructions({ browser, onDone }: { browser: "safari" | "chrome" | "other"; onDone: () => void }) {

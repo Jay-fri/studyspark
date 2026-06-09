@@ -8,7 +8,7 @@ import {
   RotateCcw,
   Sparkles,
   Loader2,
-} from "lucide-react";
+} from "@/lib/icons";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { cn } from "@/lib/utils";
 import type { QuizQuestion as BaseQuizQuestion } from "@/types";

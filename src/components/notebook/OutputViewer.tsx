@@ -1,4 +1,4 @@
-import { BookOpen } from "lucide-react";
+import { BookOpen } from "@/lib/icons";
 import type { AIOutput, AIOutputContent } from "@/types";
 import { SummaryView }    from "@/components/study/SummaryView";
 import { QuizView }       from "@/components/study/QuizView";

@@ -11,7 +11,7 @@ import {
   Zap, Search, Gift, BookOpen, ShieldCheck, ShieldOff, UserCog,
   PlusCircle, Loader2, AlertTriangle, Check, X,
   TrendingUp, TrendingDown, Trash2, ToggleLeft, ToggleRight, SlidersHorizontal,
-} from "lucide-react";
+} from "@/lib/icons";
 import toast from "react-hot-toast";
 import { supabase }      from "@/services/supabase";
 import { useAuthStore }  from "@/stores/authStore";

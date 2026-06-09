@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle2, RotateCcw, Trophy, BookOpen } from "lucide-react";
+import { ArrowLeft, CheckCircle2, RotateCcw, Trophy, BookOpen } from "@/lib/icons";
 import { supabase } from "@/services/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { useSRS } from "@/hooks/useSRS";

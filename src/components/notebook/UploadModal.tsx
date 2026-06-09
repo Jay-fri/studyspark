@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { motion } from "framer-motion";
-import { X, Upload, FileText, Type, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { X, Upload, FileText, Type, CheckCircle, AlertCircle, Loader2 } from "@/lib/icons";
 import { useUploadSource, type UploadProgress } from "@/hooks/useUploadSource";
 import { Portal } from "@/components/shared/Portal";
 import { cn } from "@/lib/utils";

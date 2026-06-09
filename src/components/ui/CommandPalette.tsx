@@ -12,7 +12,7 @@ import {
   Library,
   Settings,
   X,
-} from "lucide-react";
+} from "@/lib/icons";
 import { useUIStore } from "@/stores/uiStore";
 import { useNotebookStore } from "@/stores/notebookStore";
 import type { Notebook, Source, AIOutput } from "@/types";

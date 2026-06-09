@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
+import { X } from "@/lib/icons";
 import { Portal } from "@/components/shared/Portal";
 import { cn } from "@/lib/utils";
 import type { GenerationOptions } from "@/types";
@@ -62,14 +62,15 @@ export function GenerationOptionsModal({ type, onConfirm, onClose }: Props) {
             onClick={onClose}
           />
 
-          {/* Modal */}
+          {/* Centering shell — flex keeps modal truly centered without fighting Framer Motion transforms */}
+          <div className="fixed z-[60] inset-0 flex items-center justify-center px-4 pointer-events-none">
           <motion.div
             key="gen-modal"
             initial={{ opacity: 0, scale: 0.95, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 16 }}
             transition={{ type: "spring", stiffness: 420, damping: 34 }}
-            className="fixed z-[60] left-4 right-4 top-1/2 -translate-y-1/2 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-full sm:max-w-md"
+            className="w-full max-w-md pointer-events-auto"
           >
             <div className="bg-[var(--surface-0)] border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden">
 
@@ -148,6 +149,7 @@ export function GenerationOptionsModal({ type, onConfirm, onClose }: Props) {
               </div>
             </div>
           </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>

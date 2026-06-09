@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, XCircle, RotateCcw, Trophy, Download, FileText } from "lucide-react";
+import { CheckCircle2, XCircle, RotateCcw, Trophy, Download, FileText } from "@/lib/icons";
 import type { QuizQuestion } from "@/types";
 import { exportQuizPDF, exportQuizText } from "@/lib/exportUtils";
 

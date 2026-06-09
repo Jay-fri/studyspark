@@ -14,7 +14,7 @@ import {
   Layers,
   Loader2,
   AlertCircle,
-} from "lucide-react";
+} from "@/lib/icons";
 import { useNotebookStore } from "@/stores/notebookStore";
 import { useNotebookSources } from "@/hooks/useNotebook";
 import { UploadModal } from "./UploadModal";

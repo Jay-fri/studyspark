@@ -1,6 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/lib/icons";
 
 export function ProtectedRoute() {
   const { user, isLoading } = useAuthStore();

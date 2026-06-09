@@ -21,6 +21,8 @@ export interface Notebook {
   description: string | null;
   emoji: string;
   color: string;
+  cover_image_url: string | null;
+  icon_url: string | null;
   created_at: string;
   updated_at: string;
 }

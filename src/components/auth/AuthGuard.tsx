@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/lib/icons";
 import { useAuthStore } from "@/stores/authStore";
 
 const LAST_PATH_KEY = "studylm-last-path";

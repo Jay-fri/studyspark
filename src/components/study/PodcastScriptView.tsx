@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Play, Pause, Square, Copy } from "lucide-react";
+import { Play, Pause, Square, Copy } from "@/lib/icons";
 import toast from "react-hot-toast";
 
 interface PodcastScriptViewProps {

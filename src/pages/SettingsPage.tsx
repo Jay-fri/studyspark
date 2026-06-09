@@ -8,7 +8,7 @@ import {
   Camera, Loader2,
   TrendingUp, TrendingDown, Eye, EyeOff,
   AlertTriangle, Download, Trash2, Lock,
-} from "lucide-react";
+} from "@/lib/icons";
 import { supabase }      from "@/services/supabase";
 import { useAuthStore }  from "@/stores/authStore";
 import { useUIStore }    from "@/stores/uiStore";
@@ -297,24 +297,29 @@ function AppearanceTab() {
       </Section>
 
       <Section title="Font Size">
-        <div className="grid grid-cols-3 gap-2">
-          {(["small","medium","large"] as const).map((s) => (
+        <div className="grid grid-cols-5 gap-2">
+          {([
+            { key: "small",  px: "13px", label: "Small",   display: "text-xs"  },
+            { key: "medium", px: "14px", label: "Medium",  display: "text-sm"  },
+            { key: "large",  px: "16px", label: "Large",   display: "text-base"},
+            { key: "xl",     px: "18px", label: "X-Large", display: "text-lg"  },
+            { key: "xxl",    px: "20px", label: "XX-Large",display: "text-xl"  },
+          ] as const).map(({ key, label, display }) => (
             <button
-              key={s}
-              onClick={() => setFontSize(s)}
+              key={key}
+              onClick={() => setFontSize(key)}
               className={cn(
                 "flex flex-col items-center gap-2 py-4 rounded-xl border transition-all",
-                fontSize === s
+                fontSize === key
                   ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/5"
                   : "border-[var(--border)] hover:bg-[var(--surface-2)]"
               )}
             >
               <span className={cn(
-                "font-semibold",
-                s === "small" ? "text-sm" : s === "medium" ? "text-base" : "text-xl",
-                fontSize === s ? "text-[var(--brand-primary)]" : "text-[var(--text-secondary)]"
+                "font-semibold", display,
+                fontSize === key ? "text-[var(--brand-primary)]" : "text-[var(--text-secondary)]"
               )}>Aa</span>
-              <span className="text-xs text-[var(--text-muted)] capitalize">{s}</span>
+              <span className="text-[10px] text-center text-[var(--text-muted)] leading-tight px-1">{label}</span>
             </button>
           ))}
         </div>

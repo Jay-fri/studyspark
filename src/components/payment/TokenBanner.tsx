@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, X } from "lucide-react";
+import { Zap, X } from "@/lib/icons";
 import { useUIStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import { cn } from "@/lib/utils";

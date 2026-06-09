@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, RefreshCw, Loader2, Zap } from "lucide-react";
+import { X, RefreshCw, Loader2, Zap } from "@/lib/icons";
 import { OutputViewer } from "./OutputViewer";
 import { useTokenCosts } from "@/hooks/useTokenCosts";
 import { Portal } from "@/components/shared/Portal";

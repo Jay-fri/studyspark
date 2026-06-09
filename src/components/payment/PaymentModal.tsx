@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Zap, Check, Loader2,
   CreditCard, Building2, Smartphone, ShieldCheck,
-} from "lucide-react";
+} from "@/lib/icons";
 import { useUIStore }      from "@/stores/uiStore";
 import { useFlutterwave }  from "@/hooks/useFlutterwave";
 import { useAuthStore }    from "@/stores/authStore";

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useUIStore } from "@/stores/uiStore";
 
-const FONT_SIZE_MAP = { small: "13px", medium: "14px", large: "16px" } as const;
+const FONT_SIZE_MAP = { small: "13px", medium: "14px", large: "16px", xl: "18px", xxl: "20px" } as const;
 
 export function useTheme() {
   const { theme, setTheme, density, fontSize } = useUIStore();

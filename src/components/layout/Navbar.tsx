@@ -16,7 +16,7 @@ import {
   BookMarked,
   Library,
   CheckCheck,
-} from "lucide-react";
+} from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";

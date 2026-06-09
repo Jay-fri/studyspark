@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   X, ChevronLeft, ChevronRight, Timer, Play, Pause,
   RotateCcw, CheckCircle2, Coffee,
-} from "lucide-react";
+} from "@/lib/icons";
 import { supabase } from "@/services/supabase";
 import { useNotebookStore } from "@/stores/notebookStore";
 import { useSRS } from "@/hooks/useSRS";

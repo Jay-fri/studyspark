@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BookOpen, Plus, RotateCcw, ChevronLeft, ChevronRight, Sparkles, Loader2 } from "lucide-react";
+import { BookOpen, Plus, RotateCcw, ChevronLeft, ChevronRight, Sparkles, Loader2 } from "@/lib/icons";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { cn } from "@/lib/utils";
 import type { Flashcard } from "@/types";

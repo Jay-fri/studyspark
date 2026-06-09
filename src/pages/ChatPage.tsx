@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Sparkles, Bot, User, Loader2, FileText } from "lucide-react";
+import { Send, Sparkles, Bot, User, Loader2, FileText } from "@/lib/icons";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useSessionStore } from "@/stores/sessionStore";

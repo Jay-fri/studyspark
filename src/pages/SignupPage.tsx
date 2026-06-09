@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Sparkles, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Sparkles, Eye, EyeOff, Loader2 } from "@/lib/icons";
 import { useAuth } from "@/hooks/useAuth";
 import toast from "react-hot-toast";
 

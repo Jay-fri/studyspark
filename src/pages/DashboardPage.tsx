@@ -4,7 +4,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
 import { useSRS } from "@/hooks/useSRS";
-import { ChevronRight, Layers } from "lucide-react";
+import { ChevronRight, Layers } from "@/lib/icons";
 import { supabase } from "@/services/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { useNotebookStore } from "@/stores/notebookStore";

@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { LayoutDashboard, BookMarked, Library, User, Plus, Shield } from "lucide-react";
+import { LayoutDashboard, BookMarked, Library, User, Plus, Shield } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { useNotebookStore } from "@/stores/notebookStore";
 import { useAuthStore } from "@/stores/authStore";

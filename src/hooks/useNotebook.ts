@@ -34,7 +34,7 @@ export function useNotebooks() {
   useEffect(() => { if (query.data) setNotebooks(query.data); }, [query.data, setNotebooks]);
 
   const createNotebook = useMutation({
-    mutationFn: async (input: Pick<Notebook, "title" | "description" | "emoji" | "color">): Promise<Notebook> => {
+    mutationFn: async (input: Pick<Notebook, "title" | "description" | "emoji" | "color" | "cover_image_url" | "icon_url">): Promise<Notebook> => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.from("notebooks") as any)
         .insert({ ...input, user_id: userId })
@@ -73,11 +73,13 @@ export function useNotebooks() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.from("notebooks") as any)
         .insert({
-          user_id:     userId,
-          title:       `${source.title} (Copy)`,
-          description: source.description,
-          emoji:       source.emoji,
-          color:       source.color,
+          user_id:         userId,
+          title:           `${source.title} (Copy)`,
+          description:     source.description,
+          emoji:           source.emoji,
+          color:           source.color,
+          cover_image_url: source.cover_image_url ?? null,
+          icon_url:        source.icon_url ?? null,
         })
         .select()
         .single();

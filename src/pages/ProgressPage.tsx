@@ -6,7 +6,7 @@ import {
   Target,
   TrendingUp,
   Award,
-} from "lucide-react";
+} from "@/lib/icons";
 import {
   BarChart,
   Bar,
