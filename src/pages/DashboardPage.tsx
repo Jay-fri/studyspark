@@ -556,6 +556,8 @@ interface NbCardProps {
     title: string;
     emoji?: string | null;
     color?: string | null;
+    cover_image_url?: string | null;
+    icon_url?: string | null;
     updated_at: string;
   };
   mobile?: boolean;
@@ -568,37 +570,60 @@ function NotebookCard({ nb, mobile }: NbCardProps) {
       to={`/notebooks/${nb.id}`}
       className={[
         "flex flex-col rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5",
-        "dark:bg-[rgba(255,255,255,0.04)] dark:border dark:border-[rgba(255,255,255,0.09)]",
-        "dark:hover:bg-[rgba(255,255,255,0.07)] dark:hover:border-[rgba(56,224,195,0.2)]",
-        mobile ? "shrink-0 min-w-[150px]" : "",
+        mobile ? "shrink-0 min-w-[155px]" : "",
       ].join(" ")}
       style={{
         background: "var(--surface-1)",
-        border: "0.5px solid var(--border)",
+        border: `0.5px solid ${color}40`,
         boxShadow: "var(--shadow-sm)",
       }}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-md)";
+        (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 20px ${color}25`;
+        (e.currentTarget as HTMLElement).style.borderColor = `${color}70`;
       }}
       onMouseLeave={(e) => {
         (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-sm)";
+        (e.currentTarget as HTMLElement).style.borderColor = `${color}40`;
       }}>
-      {/* Colored header zone */}
-      <div className="px-5 pt-5 pb-4" style={{ background: `${color}0f` }}>
-        <span className="text-2xl leading-none block">{nb.emoji || "📚"}</span>
-        <p
-          className="mt-2.5 text-sm font-semibold leading-snug line-clamp-2"
-          style={{ color: "var(--text-primary)" }}>
-          {nb.title}
-        </p>
+      {/* Cover zone — image or color tint */}
+      <div
+        className="px-4 pt-4 pb-3.5 relative overflow-hidden"
+        style={
+          nb.cover_image_url
+            ? { backgroundImage: `url(${nb.cover_image_url})`, backgroundSize: "cover", backgroundPosition: "center", minHeight: "76px" }
+            : { background: `${color}18` }
+        }>
+        {nb.cover_image_url && (
+          <div className="absolute inset-0" style={{ background: "rgba(5,12,25,0.52)" }} />
+        )}
+        {!nb.cover_image_url && (
+          <div
+            className="absolute -top-4 -right-4 w-16 h-16 rounded-full opacity-30"
+            style={{ background: `radial-gradient(circle, ${color}60, transparent 70%)` }}
+          />
+        )}
+        <div className="relative z-10">
+          {nb.icon_url ? (
+            <div className="w-8 h-8 rounded-xl overflow-hidden" style={{ border: "1.5px solid rgba(255,255,255,0.25)" }}>
+              <img src={nb.icon_url} alt="" className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <span className="text-2xl leading-none block">{nb.emoji || "📚"}</span>
+          )}
+          <p
+            className="mt-2 text-sm font-semibold leading-snug line-clamp-2"
+            style={{ color: nb.cover_image_url ? "rgba(255,255,255,0.95)" : "var(--text-primary)" }}>
+            {nb.title}
+          </p>
+        </div>
       </div>
       <div
-        className="px-5 py-3 flex items-center justify-between"
-        style={{ borderTop: "0.5px solid var(--border-subtle)" }}>
-        <p className="text-xs" style={{ color: "var(--text-dim)" }}>
+        className="px-4 py-2.5 flex items-center justify-between"
+        style={{ borderTop: `0.5px solid ${color}20` }}>
+        <p className="text-[11px]" style={{ color: "var(--text-dim)" }}>
           {formatDistanceToNow(new Date(nb.updated_at), { addSuffix: true })}
         </p>
-        <div className="w-2 h-2 rounded-full" style={{ background: color }} />
+        <div className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
       </div>
     </Link>
   );

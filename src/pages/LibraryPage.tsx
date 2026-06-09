@@ -346,45 +346,65 @@ export default function LibraryPage() {
               animate={{ opacity: 1, y: 0 }}
             >
               {/* Section header */}
-              <div className="flex items-center gap-3 mb-4">
+              <div
+                className="relative flex items-center gap-3 px-4 py-3 rounded-xl mb-4 overflow-hidden"
+                style={
+                  nb?.cover_image_url
+                    ? { backgroundImage: `url(${nb.cover_image_url})`, backgroundSize: "cover", backgroundPosition: "center", border: `0.5px solid ${color}40` }
+                    : { background: `${color}10`, border: `0.5px solid ${color}25` }
+                }
+              >
+                {nb?.cover_image_url && (
+                  <div className="absolute inset-0 rounded-xl" style={{ background: "rgba(5,12,25,0.62)" }} />
+                )}
                 <div
-                  className="w-[3px] h-5 rounded-full shrink-0"
-                  style={{ background: color }}
-                />
+                  className="relative z-10 w-7 h-7 rounded-lg flex items-center justify-center text-base shrink-0 overflow-hidden"
+                  style={nb?.icon_url ? undefined : { background: `${color}22` }}
+                >
+                  {nb?.icon_url
+                    ? <img src={nb.icon_url} alt="" className="w-full h-full object-cover" />
+                    : (nb?.emoji ?? "📚")
+                  }
+                </div>
 
                 <button
                   onClick={() => toggleCollapse(section.notebookId)}
-                  className="flex items-center gap-2.5 min-w-0 flex-1 text-left group"
+                  className="relative z-10 flex items-center gap-2 min-w-0 flex-1 text-left"
                 >
-                  <span className="text-lg leading-none">{nb?.emoji ?? "📚"}</span>
                   <span
                     className="text-sm font-semibold truncate"
-                    style={{ color: "var(--text-primary)" }}
+                    style={{ color: nb?.cover_image_url ? "rgba(255,255,255,0.95)" : "var(--text-primary)" }}
                   >
                     {nb?.title ?? "Unknown notebook"}
                   </span>
                   <span
                     className="px-1.5 py-0.5 rounded-full text-[10px] font-bold shrink-0"
-                    style={{ background: `${color}18`, color }}
+                    style={{
+                      background: nb?.cover_image_url ? "rgba(255,255,255,0.15)" : `${color}25`,
+                      color: nb?.cover_image_url ? "rgba(255,255,255,0.9)" : color,
+                    }}
                   >
                     {section.outputs.length}
                   </span>
                   <motion.div
                     animate={{ rotate: isCollapsed ? -90 : 0 }}
                     transition={{ duration: 0.18 }}
-                    className="shrink-0"
+                    className="shrink-0 ml-0.5"
                   >
-                    <ChevronDown className="w-3.5 h-3.5" style={{ color: "var(--text-dim)" }} />
+                    <ChevronDown className="w-3.5 h-3.5" style={{ color: nb?.cover_image_url ? "rgba(255,255,255,0.5)" : "var(--text-dim)" }} />
                   </motion.div>
                 </button>
 
                 {nb && (
                   <Link
                     to={`/notebooks/${nb.id}`}
-                    className="flex items-center gap-1 text-xs shrink-0 px-2.5 py-1.5 rounded-lg transition-colors"
-                    style={{ color: "var(--text-dim)" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = color; e.currentTarget.style.background = `${color}12`; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "transparent"; }}
+                    className="relative z-10 flex items-center gap-1 text-xs shrink-0 px-2.5 py-1.5 rounded-lg font-medium transition-all"
+                    style={{
+                      color: nb.cover_image_url ? "rgba(255,255,255,0.85)" : color,
+                      background: nb.cover_image_url ? "rgba(255,255,255,0.12)" : `${color}15`,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = nb.cover_image_url ? "rgba(255,255,255,0.22)" : `${color}25`; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = nb.cover_image_url ? "rgba(255,255,255,0.12)" : `${color}15`; }}
                   >
                     <ArrowUpRight className="w-3 h-3" />
                     Open
@@ -419,7 +439,7 @@ export default function LibraryPage() {
                     ) : (
                       <div
                         className="rounded-2xl overflow-hidden"
-                        style={{ background: "var(--surface-1)", border: "0.5px solid var(--border)" }}
+                        style={{ background: "var(--surface-1)", border: `0.5px solid ${color}30` }}
                       >
                         {section.outputs.map((output, i) => {
                           const meta    = TYPE_META[output.type] ?? TYPE_META.summary;
@@ -432,7 +452,7 @@ export default function LibraryPage() {
                               style={{
                                 borderBottom: isLast ? "none" : "0.5px solid var(--border-subtle)",
                               }}
-                              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-2)")}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = `${color}08`)}
                               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                             >
                               <div

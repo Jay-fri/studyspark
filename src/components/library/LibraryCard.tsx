@@ -67,51 +67,84 @@ export function LibraryCard({ output, notebook, onOpen, onDelete, onExport }: Pr
       className="relative group flex flex-col rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-px"
       style={{
         background: "var(--surface-1)",
-        border: "0.5px solid var(--border)",
+        border: `0.5px solid ${nbColor}35`,
         boxShadow: "var(--shadow-sm)",
       }}
-      onMouseEnter={e => e.currentTarget.style.boxShadow = "var(--shadow-md)"}
-      onMouseLeave={e => e.currentTarget.style.boxShadow = "var(--shadow-sm)"}
+      onMouseEnter={e => {
+        e.currentTarget.style.boxShadow = `0 4px 20px ${nbColor}20`;
+        e.currentTarget.style.borderColor = `${nbColor}60`;
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.boxShadow = "var(--shadow-sm)";
+        e.currentTarget.style.borderColor = `${nbColor}35`;
+      }}
     >
-      {/* Notebook color accent strip — left side */}
-      <div
-        className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-2xl"
-        style={{ background: nbColor }}
-      />
-
+      {/* Colored notebook header band */}
       <button
         onClick={() => onOpen(output)}
-        className="flex flex-col flex-1 text-left px-5 pt-4 pb-3 pl-6"
+        className="flex flex-col flex-1 text-left"
       >
-        {/* Type badge */}
-        <span
-          className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full self-start mb-3"
-          style={{ background: meta.bg, color: meta.color }}
+        <div
+          className="px-4 pt-4 pb-3 relative overflow-hidden"
+          style={
+            notebook?.cover_image_url
+              ? { backgroundImage: `url(${notebook.cover_image_url})`, backgroundSize: "cover", backgroundPosition: "center", minHeight: "72px" }
+              : { background: `${nbColor}15` }
+          }
         >
-          {meta.emoji} {meta.label}
-        </span>
-
-        {/* Notebook identity */}
-        <p className="text-xs font-medium mb-2" style={{ color: "var(--text-dim)" }}>
-          {notebook?.emoji ?? "📚"} {notebook?.title ?? "Notebook"}
-        </p>
+          {notebook?.cover_image_url && (
+            <div className="absolute inset-0" style={{ background: "rgba(5,12,25,0.55)" }} />
+          )}
+          {!notebook?.cover_image_url && (
+            <div
+              className="absolute -top-3 -right-3 w-14 h-14 rounded-full opacity-20"
+              style={{ background: `radial-gradient(circle, ${nbColor}, transparent 70%)` }}
+            />
+          )}
+          <div className="flex items-center justify-between relative z-10">
+            <span
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full"
+              style={{ background: meta.bg, color: meta.color }}
+            >
+              {meta.emoji} {meta.label}
+            </span>
+            <div className="w-1.5 h-1.5 rounded-full" style={{ background: notebook?.cover_image_url ? "rgba(255,255,255,0.6)" : nbColor }} />
+          </div>
+          <div className="flex items-center gap-1.5 mt-2 relative z-10">
+            {notebook?.icon_url ? (
+              <div className="w-4 h-4 rounded-md overflow-hidden shrink-0">
+                <img src={notebook.icon_url} alt="" className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <span className="text-xs">{notebook?.emoji ?? "📚"}</span>
+            )}
+            <p
+              className="text-xs font-medium truncate"
+              style={{ color: notebook?.cover_image_url ? "rgba(255,255,255,0.8)" : `${nbColor}cc` }}
+            >
+              {notebook?.title ?? "Notebook"}
+            </p>
+          </div>
+        </div>
 
         {/* Preview */}
-        {preview ? (
-          <p className="text-sm leading-relaxed line-clamp-3 flex-1" style={{ color: "var(--text-secondary)" }}>
-            {preview}
-          </p>
-        ) : (
-          <p className="text-sm italic flex-1" style={{ color: "var(--text-dim)" }}>
-            No preview available
-          </p>
-        )}
+        <div className="px-4 pt-3 pb-3 flex-1">
+          {preview ? (
+            <p className="text-sm leading-relaxed line-clamp-3" style={{ color: "var(--text-secondary)" }}>
+              {preview}
+            </p>
+          ) : (
+            <p className="text-sm italic" style={{ color: "var(--text-dim)" }}>
+              No preview available
+            </p>
+          )}
+        </div>
       </button>
 
       {/* Footer */}
       <div
-        className="flex items-center justify-between px-5 py-3 pl-6"
-        style={{ borderTop: "0.5px solid var(--border-subtle)" }}
+        className="flex items-center justify-between px-4 py-2.5"
+        style={{ borderTop: `0.5px solid ${nbColor}20` }}
       >
         <span className="text-xs" style={{ color: "var(--text-dim)" }}>
           {format(new Date(output.updated_at), "MMM d, yyyy")}

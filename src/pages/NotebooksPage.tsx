@@ -149,7 +149,7 @@ function NotebookModal({
   return (
     <>
     <motion.div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-[84px] sm:px-0 sm:pb-0"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
     >
       <motion.div
@@ -158,11 +158,11 @@ function NotebookModal({
       />
 
       <motion.div
-        className="relative w-full sm:max-w-[440px] sm:mx-4 rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col"
+        className="relative w-full sm:max-w-[440px] sm:mx-4 rounded-3xl overflow-hidden flex flex-col"
         style={{
           background: "#0f1e35",
           border: "0.5px solid rgba(255,255,255,0.08)",
-          maxHeight: "92dvh",
+          maxHeight: "min(80dvh, calc(100dvh - 68px - env(safe-area-inset-bottom, 0px)))",
         }}
         initial={{ opacity: 0, y: 60 }}
         animate={{ opacity: 1, y: 0 }}
@@ -417,8 +417,7 @@ function NotebookModal({
               }
             </button>
 
-            {/* Safe area spacer for iOS */}
-            <div style={{ height: "env(safe-area-inset-bottom, 0px)" }} />
+
           </div>
         </div>
 
