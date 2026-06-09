@@ -10,6 +10,8 @@ export interface Profile {
   study_tokens: number;
   total_tokens_used: number;
   is_suspended: boolean;
+  is_banned: boolean;
+  ban_reason: string | null;
   created_at: string;
   updated_at: string;
 }

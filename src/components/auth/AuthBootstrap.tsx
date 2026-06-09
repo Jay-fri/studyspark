@@ -23,10 +23,6 @@ export function AuthBootstrap() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Supabase JS v2 fires INITIAL_SESSION on mount with the stored session.
-    // Using onAuthStateChange as the single source of truth avoids the race
-    // condition between a separate getSession() call and INITIAL_SESSION both
-    // racing to call setProfile().
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
@@ -35,7 +31,10 @@ export function AuthBootstrap() {
         if (session?.user) {
           const profile = await fetchProfileWithRetry(session.user.id);
           setProfile(profile);
-          if (profile?.role === "admin" && event === "SIGNED_IN") {
+
+          if (profile?.is_banned) {
+            navigate("/banned", { replace: true });
+          } else if (profile?.role === "admin" && event === "SIGNED_IN") {
             const current = window.location.pathname;
             if (current === "/" || current === "/auth") {
               navigate("/admin", { replace: true });
@@ -49,7 +48,42 @@ export function AuthBootstrap() {
       }
     );
 
-    return () => subscription.unsubscribe();
+    // Check immediately on mount in case user is already banned
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session?.user) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("is_banned, ban_reason")
+        .eq("id", session.user.id)
+        .single();
+      if (data?.is_banned) {
+        const current = useAuthStore.getState().profile;
+        if (current) useAuthStore.getState().setProfile({ ...current, is_banned: true, ban_reason: data.ban_reason });
+        navigate("/banned", { replace: true });
+      }
+    });
+
+    // Poll every 15s to catch ban while user is active — no realtime config needed
+    const pollInterval = setInterval(async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("is_banned, ban_reason")
+        .eq("id", session.user.id)
+        .single();
+      if (data?.is_banned) {
+        clearInterval(pollInterval);
+        const current = useAuthStore.getState().profile;
+        if (current) useAuthStore.getState().setProfile({ ...current, is_banned: true, ban_reason: data.ban_reason });
+        navigate("/banned", { replace: true });
+      }
+    }, 15_000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearInterval(pollInterval);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

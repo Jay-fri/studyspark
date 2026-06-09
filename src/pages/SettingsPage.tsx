@@ -127,9 +127,14 @@ function ProfileTab() {
   const handleDeleteAccount = async () => {
     if (deleteConfirm !== "DELETE") return;
     setDeleting(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    const { error } = await supabase.functions.invoke("delete-user", {
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
+    if (error) { toast.error("Failed to delete account. Try again."); setDeleting(false); return; }
     await supabase.auth.signOut();
-    toast("Your account deletion has been requested. We'll process it within 24 hours.", { icon: "📧" });
-    setDeleting(false);
+    useAuthStore.getState().signOut();
+    window.location.replace("/auth");
   };
 
   const initials = (profile?.full_name ?? user?.email ?? "S")[0].toUpperCase();

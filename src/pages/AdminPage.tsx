@@ -21,7 +21,7 @@ import type { Profile, Payment, Announcement } from "@/types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-type AdminTab = "overview" | "users" | "payments" | "analytics" | "announcements" | "groq" | "token-costs" | "feedback";
+type AdminTab = "overview" | "users" | "payments" | "analytics" | "announcements" | "groq" | "token-costs" | "feedback" | "ban-appeals";
 
 const TABS: { id: AdminTab; label: string; icon: React.ElementType }[] = [
   { id: "overview",      label: "Overview",      icon: LayoutDashboard    },
@@ -32,6 +32,7 @@ const TABS: { id: AdminTab; label: string; icon: React.ElementType }[] = [
   { id: "token-costs",   label: "Token Costs",   icon: SlidersHorizontal  },
   { id: "groq",          label: "Groq Monitor",  icon: Cpu                },
   { id: "feedback",      label: "Feedback",      icon: MessageSquare      },
+  { id: "ban-appeals",   label: "Ban Appeals",   icon: ShieldOff          },
 ];
 
 const CHART_COLORS = ["#E07B1A","#6366F1","#10B981","#F59E0B","#EF4444","#8B5CF6","#06B6D4"];
@@ -226,12 +227,52 @@ function ViewNotebooksModal({ user, onClose }: { user: Profile; onClose: () => v
   );
 }
 
+function BanModal({ user, onClose }: { user: Profile; onClose: () => void }) {
+  const [reason, setReason] = useState("");
+  const qc = useQueryClient();
+
+  const ban = async () => {
+    const { error } = await (supabase.from("profiles") as any)
+      .update({ is_banned: true, ban_reason: reason.trim() || null })
+      .eq("id", user.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`${user.full_name ?? user.email} banned`);
+    qc.invalidateQueries({ queryKey: ["admin-users"] });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <motion.div
+        initial={{ scale: 0.96, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="relative bg-[var(--surface-0)] border border-[var(--border)] rounded-2xl p-6 w-full max-w-sm shadow-2xl"
+      >
+        <h3 className="text-base font-semibold text-[var(--text-primary)] mb-1">Ban User</h3>
+        <p className="text-xs text-[var(--text-muted)] mb-4">{user.full_name ?? user.email}</p>
+        <input
+          placeholder="Ban reason (optional)"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          className="w-full px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30 mb-4"
+        />
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 py-2 rounded-xl border border-[var(--border)] text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-1)] transition-colors">Cancel</button>
+          <button onClick={ban} className="flex-1 py-2 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors">Ban</button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 function UsersTab() {
   const qc = useQueryClient();
-  const [search, setSearch]     = useState("");
-  const [filter, setFilter]     = useState<UserFilter>("all");
+  const [search, setSearch]       = useState("");
+  const [filter, setFilter]       = useState<UserFilter>("all");
   const [grantUser, setGrantUser] = useState<Profile | null>(null);
   const [nbUser, setNbUser]       = useState<Profile | null>(null);
+  const [banUser, setBanUser]     = useState<Profile | null>(null);
 
   const weekAgoISO = subDays(new Date(), 7).toISOString();
 
@@ -277,10 +318,12 @@ function UsersTab() {
     return list;
   }, [allProfiles, filter, search, activeUserIds]);
 
-  const toggleSuspend = async (p: Profile) => {
-    const { error } = await (supabase.from("profiles") as any).update({ is_suspended: !p.is_suspended }).eq("id", p.id);
+  const unban = async (p: Profile) => {
+    const { error } = await (supabase.from("profiles") as any)
+      .update({ is_banned: false, ban_reason: null })
+      .eq("id", p.id);
     if (error) { toast.error(error.message); return; }
-    toast.success(p.is_suspended ? "Account reactivated" : "Account suspended");
+    toast.success("User unbanned");
     qc.invalidateQueries({ queryKey: ["admin-users"] });
   };
 
@@ -399,14 +442,15 @@ function UsersTab() {
                       <button title={`Make ${p.role === "admin" ? "student" : "admin"}`} onClick={() => toggleRole(p)} className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[#F59E0B] hover:bg-[#F59E0B]/10 transition-colors">
                         <UserCog className="w-3.5 h-3.5" />
                       </button>
-                      <button title={p.is_suspended ? "Reactivate" : "Suspend"} onClick={() => toggleSuspend(p)} className={cn(
-                        "p-1.5 rounded-lg transition-colors",
-                        p.is_suspended
-                          ? "text-green-500 hover:bg-green-500/10"
-                          : "text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/10"
-                      )}>
-                        {p.is_suspended ? <ShieldCheck className="w-3.5 h-3.5" /> : <ShieldOff className="w-3.5 h-3.5" />}
-                      </button>
+                      {p.is_banned ? (
+                        <button title="Unban" onClick={() => unban(p)} className="p-1.5 rounded-lg text-green-500 hover:bg-green-500/10 transition-colors">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                        </button>
+                      ) : (
+                        <button title="Ban" onClick={() => setBanUser(p)} className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-red-600 hover:bg-red-600/10 transition-colors">
+                          <ShieldOff className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -421,6 +465,134 @@ function UsersTab() {
 
       {grantUser && <GrantTokensModal user={grantUser} onClose={() => setGrantUser(null)} />}
       {nbUser    && <ViewNotebooksModal user={nbUser}   onClose={() => setNbUser(null)} />}
+      {banUser   && <BanModal user={banUser} onClose={() => setBanUser(null)} />}
+    </div>
+  );
+}
+
+// ─── Ban Appeals Tab ────────────────────────────────────────────────────────
+
+type AppealFilter = "pending" | "unbanned" | "dismissed" | "ignored";
+
+const APPEAL_FILTERS: { id: AppealFilter; label: string; color: string }[] = [
+  { id: "pending",   label: "Unattended", color: "#F59E0B" },
+  { id: "unbanned",  label: "Unbanned",   color: "#10B981" },
+  { id: "dismissed", label: "Dismissed",  color: "#EF4444" },
+  { id: "ignored",   label: "Ignored",    color: "#94A3B8" },
+];
+
+function BanAppealsTab() {
+  const qc = useQueryClient();
+  const [filter, setFilter] = useState<AppealFilter>("pending");
+
+  const { data: appeals = [], isLoading } = useQuery({
+    queryKey: ["admin-ban-appeals", filter],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("ban_appeals") as any)
+        .select("id, email, message, status, created_at")
+        .eq("status", filter)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 30_000,
+  });
+
+  const setStatus = async (id: string, status: AppealFilter, extraProfileUpdate?: { email: string }) => {
+    if (extraProfileUpdate) {
+      const { error } = await (supabase.from("profiles") as any)
+        .update({ is_banned: false, ban_reason: null })
+        .eq("email", extraProfileUpdate.email);
+      if (error) { toast.error(error.message); return; }
+    }
+    const { error } = await (supabase.from("ban_appeals") as any)
+      .update({ status }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(status === "unbanned" ? "User unbanned" : status === "dismissed" ? "Appeal dismissed" : "Appeal ignored");
+    qc.invalidateQueries({ queryKey: ["admin-ban-appeals"] });
+    if (status === "unbanned") qc.invalidateQueries({ queryKey: ["admin-users"] });
+  };
+
+  const counts = useQuery({
+    queryKey: ["admin-ban-appeals-counts"],
+    queryFn: async () => {
+      const results = await Promise.all(
+        APPEAL_FILTERS.map(async ({ id }) => {
+          const { count } = await (supabase.from("ban_appeals") as any)
+            .select("*", { count: "exact", head: true }).eq("status", id);
+          return [id, count ?? 0] as [AppealFilter, number];
+        })
+      );
+      return Object.fromEntries(results) as Record<AppealFilter, number>;
+    },
+    staleTime: 30_000,
+  });
+
+  return (
+    <div className="space-y-4 max-w-2xl">
+      {/* Sub-tabs */}
+      <div className="flex gap-2 flex-wrap">
+        {APPEAL_FILTERS.map(({ id, label, color }) => {
+          const count = counts.data?.[id] ?? 0;
+          const active = filter === id;
+          return (
+            <button
+              key={id}
+              onClick={() => setFilter(id)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+              style={active
+                ? { background: `${color}18`, color, border: `0.5px solid ${color}40` }
+                : { background: "var(--surface-1)", color: "var(--text-muted)", border: "0.5px solid var(--border)" }
+              }
+            >
+              {label}
+              {count > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold" style={{ background: active ? `${color}30` : "var(--surface-3)", color: active ? color : "var(--text-muted)" }}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {isLoading && <div className="flex justify-center py-16"><Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" /></div>}
+      {!isLoading && appeals.length === 0 && (
+        <p className="text-center py-16 text-sm text-[var(--text-muted)]">No appeals in this category.</p>
+      )}
+      {appeals.map((a: any) => (
+        <div key={a.id} className="bg-[var(--surface-1)] border border-[var(--border)] rounded-2xl p-5 space-y-3">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-sm font-medium text-[var(--text-primary)]">{a.email ?? "Unknown"}</p>
+              <p className="text-xs text-[var(--text-muted)]">{format(new Date(a.created_at), "MMM d, yyyy · h:mm a")}</p>
+            </div>
+            {filter === "pending" && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setStatus(a.id, "unbanned", { email: a.email })}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-500/10 text-green-500 text-xs font-medium hover:bg-green-500/20 transition-colors"
+                >
+                  <ShieldCheck className="w-3 h-3" /> Unban
+                </button>
+                <button
+                  onClick={() => setStatus(a.id, "dismissed")}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/10 text-red-500 text-xs font-medium hover:bg-red-500/20 transition-colors"
+                >
+                  <X className="w-3 h-3" /> Dismiss
+                </button>
+                <button
+                  onClick={() => setStatus(a.id, "ignored")}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--surface-3)] text-[var(--text-muted)] text-xs font-medium hover:bg-[var(--surface-2)] transition-colors"
+                >
+                  Ignore
+                </button>
+              </div>
+            )}
+          </div>
+          <p className="text-sm text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap">{a.message}</p>
+        </div>
+      ))}
     </div>
   );
 }
@@ -1174,6 +1346,7 @@ export default function AdminPage() {
           {tab === "token-costs"   && <TokenCostsTab />}
           {tab === "groq"          && <GroqMonitorTab />}
           {tab === "feedback"      && <FeedbackTab />}
+          {tab === "ban-appeals"   && <BanAppealsTab />}
         </motion.div>
       </AnimatePresence>
     </div>

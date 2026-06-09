@@ -42,6 +42,10 @@ export function AuthGuard({ adminOnly = false }: AuthGuardProps) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
+  if (useAuthStore.getState().profile?.is_banned) {
+    return <Navigate to="/banned" replace />;
+  }
+
   if (adminOnly && !isAdmin) {
     return <Navigate to="/dashboard" replace />;
   }

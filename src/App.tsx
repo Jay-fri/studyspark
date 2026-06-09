@@ -30,6 +30,7 @@ const AnatomyPage       = lazy(() => import("@/pages/AnatomyPage"));
 const FeedbackPage      = lazy(() => import("@/pages/FeedbackPage"));
 const NotFoundPage           = lazy(() => import("@/pages/NotFoundPage"));
 const PaymentCallbackPage    = lazy(() => import("@/pages/PaymentCallbackPage"));
+const BannedPage             = lazy(() => import("@/pages/BannedPage"));
 
 function PageLoader() {
   return (
@@ -56,6 +57,7 @@ export default function App() {
               {/* Public */}
               <Route path="/"                  element={<LandingPage />} />
               <Route path="/auth"              element={<AuthPage />} />
+              <Route path="/banned"            element={<BannedPage />} />
               <Route path="/payment-callback"  element={<PaymentCallbackPage />} />
 
               {/* Protected — regular users */}

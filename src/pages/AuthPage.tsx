@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { getLastPath } from "@/components/auth/AuthGuard";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, Loader2, ArrowLeft, CheckCircle2 } from "@/lib/icons";
+import { Eye, EyeOff, Loader2, ArrowLeft, CheckCircle2, ShieldOff, Send } from "@/lib/icons";
 import { useAuth } from "@/hooks/useAuth";
 import { NIGERIAN_UNIVERSITIES } from "@/types";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
+import { supabase } from "@/services/supabase";
 
 type Tab = "signin" | "signup" | "forgot" | "check-email";
 
@@ -124,6 +125,101 @@ function SubmitButton({ loading, label }: { loading: boolean; label: string }) {
   );
 }
 
+// ── Banned modal ──────────────────────────────────────────────────────────
+
+const APPEAL_STATUS_LABELS: Record<string, string> = {
+  pending:   "⏳ Pending review",
+  reviewed:  "👀 Being reviewed",
+  dismissed: "❌ Dismissed",
+};
+
+function BannedModal({ userId, banReason, existingStatus, adminReply: initialAdminReply, onClose }: {
+  userId: string;
+  banReason: string | null;
+  existingStatus: string | null;
+  adminReply: string | null;
+  onClose: () => void;
+}) {
+  const [appeal, setAppeal]     = useState("");
+  const [sending, setSending]   = useState(false);
+  const [sent, setSent]         = useState(!!existingStatus);
+  const [appealStatus, setAppealStatus] = useState<string | null>(existingStatus);
+
+  const submit = async () => {
+    if (!appeal.trim()) return;
+    setSending(true);
+    const { error } = await (supabase.from("ban_appeals") as any).insert({ user_id: userId, message: appeal.trim() });
+    setSending(false);
+    if (error) { toast.error("Failed to send. Try again."); return; }
+    setSent(true);
+    setAppealStatus("pending");
+    toast.success("Appeal sent.");
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="relative w-full max-w-sm rounded-2xl p-6 space-y-4"
+        style={{ background: "rgba(20,30,50,0.98)", border: "0.5px solid rgba(239,68,68,0.3)" }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
+            <ShieldOff className="w-5 h-5 text-red-500" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">Account Banned</p>
+            {banReason && <p className="text-xs text-red-400 mt-0.5">{banReason}</p>}
+          </div>
+        </div>
+
+        {sent ? (
+          <div className="space-y-2">
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>Your appeal status:</p>
+            <p className="text-sm font-medium" style={{ color: appealStatus === "dismissed" ? "#94A3B8" : appealStatus === "reviewed" ? "#6366F1" : "#F59E0B" }}>
+              {APPEAL_STATUS_LABELS[appealStatus ?? "pending"] ?? "Pending"}
+            </p>
+            {initialAdminReply && (
+              <div className="mt-2 p-3 rounded-xl" style={{ background: "rgba(99,102,241,0.08)", border: "0.5px solid rgba(99,102,241,0.2)" }}>
+                <p className="text-[10px] font-semibold mb-1" style={{ color: "#6366F1" }}>Admin reply</p>
+                <p className="text-xs" style={{ color: "rgba(255,255,255,0.7)" }}>{initialAdminReply}</p>
+              </div>
+            )}
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+              Check back here when you sign in to see updates.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+              Think this is a mistake? Send an appeal to the admin.
+            </p>
+            <textarea
+              value={appeal}
+              onChange={(e) => setAppeal(e.target.value)}
+              rows={3}
+              placeholder="Explain why you think this ban should be lifted…"
+              className="w-full px-3 py-2.5 rounded-xl text-sm text-white placeholder:text-[rgba(255,255,255,0.2)] resize-none focus:outline-none"
+              style={{ background: "rgba(255,255,255,0.05)", border: "0.5px solid rgba(255,255,255,0.1)" }}
+            />
+            <button
+              onClick={submit}
+              disabled={sending || !appeal.trim()}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 transition-opacity"
+              style={{ background: "#38E0C3", color: "#0a1628" }}
+            >
+              {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              Send Appeal
+            </button>
+          </div>
+        )}
+      </motion.div>
+    </div>
+  );
+}
+
 // ── Sign-in form ───────────────────────────────────────────────────────────
 
 function SignInForm({ onSwitch }: { onSwitch: (t: Tab) => void }) {
@@ -135,6 +231,7 @@ function SignInForm({ onSwitch }: { onSwitch: (t: Tab) => void }) {
   const [loading,   setLoading]   = useState(false);
   const [gLoading,  setGLoading]  = useState(false);
   const [formError, setFormError] = useState("");
+  const [bannedInfo, setBannedInfo] = useState<{ userId: string; reason: string | null; existingStatus: string | null; adminReply: string | null } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,6 +239,26 @@ function SignInForm({ onSwitch }: { onSwitch: (t: Tab) => void }) {
     setLoading(true);
     try {
       await signIn(email, password);
+      // After sign-in, check if banned before navigating
+      const { data: profile } = await supabase.from("profiles").select("id, is_banned, ban_reason").eq("email", email).single();
+      if (profile?.is_banned) {
+        // Fetch existing appeal status while session is still valid
+        const { data: existingAppeal } = await (supabase.from("ban_appeals") as any)
+          .select("status, admin_reply")
+          .eq("user_id", profile.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+        await supabase.auth.signOut();
+        setBannedInfo({
+          userId: profile.id,
+          reason: profile.ban_reason,
+          existingStatus: existingAppeal?.status ?? null,
+          adminReply: existingAppeal?.admin_reply ?? null,
+        });
+        setLoading(false);
+        return;
+      }
       const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? getLastPath();
       navigate(from, { replace: true });
     } catch (err) {
@@ -201,6 +318,15 @@ function SignInForm({ onSwitch }: { onSwitch: (t: Tab) => void }) {
           Sign up free
         </button>
       </p>
+      {bannedInfo && (
+        <BannedModal
+          userId={bannedInfo.userId}
+          banReason={bannedInfo.reason}
+          existingStatus={bannedInfo.existingStatus}
+          adminReply={bannedInfo.adminReply}
+          onClose={() => setBannedInfo(null)}
+        />
+      )}
     </motion.div>
   );
 }
