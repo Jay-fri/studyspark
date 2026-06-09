@@ -124,19 +124,6 @@ export function useNotebookSources(notebookId: string | undefined) {
     }
   }, [query.data, notebookId, setSources]);
 
-  // Supabase Realtime — keep sources live without polling
-  useEffect(() => {
-    if (!notebookId) return;
-    const channel = supabase
-      .channel(`sources:${notebookId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "sources", filter: `notebook_id=eq.${notebookId}` },
-        () => { qc.invalidateQueries({ queryKey: ["sources", notebookId] }); }
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [notebookId, qc]);
 
   const renameSource = useMutation({
     mutationFn: async ({ id, title }: { id: string; title: string }): Promise<Source> => {
