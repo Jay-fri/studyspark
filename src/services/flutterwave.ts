@@ -52,7 +52,9 @@ export async function openFlutterwaveCheckout(
 ): Promise<void> {
   await loadScript();
 
-  const publicKey = import.meta.env.VITE_FLUTTERWAVE_PUBLIC_KEY;
+  // VITE_FLUTTERWAVE_PUBLIC_KEY overrides for local dev (test key in .env.local).
+  // Falls back to the live key for production builds.
+  const publicKey = import.meta.env.VITE_FLUTTERWAVE_PUBLIC_KEY || "FLWPUBK-708958c3ae91635ba7cb515957c95f49-X";
   if (!publicKey) throw new Error("Missing VITE_FLUTTERWAVE_PUBLIC_KEY");
 
   const shortId = profile.id.replace(/-/g, "").slice(0, 12);
