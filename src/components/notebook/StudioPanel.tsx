@@ -120,7 +120,7 @@ export function StudioPanel({
             Create
           </p>
           <div className="grid grid-cols-2 gap-2">
-            {STUDIO_ITEMS.map(({ type, label, icon, desc }, idx) => {
+            {STUDIO_ITEMS.map(({ type, label, icon, desc }) => {
               const output   = getOutput(type);
               const isThis   = isGenerating && generatingType === type;
               const cost     = costs[type as keyof typeof costs];
@@ -129,7 +129,7 @@ export function StudioPanel({
               return (
                 <motion.button
                   key={type}
-                  id={idx === 0 ? "tour-generate-card" : undefined}
+                  id={`tour-studio-${type}`}
                   whileTap={{ scale: 0.97 }}
                   onHoverStart={() => setHoveredType(type)}
                   onHoverEnd={() => setHoveredType(null)}

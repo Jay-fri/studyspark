@@ -149,6 +149,66 @@ export function useTour() {
       },
     });
 
+    // ── Individual studio feature steps (shared between mobile + desktop) ───────
+    const studioFeatureSteps: DriveStep[] = [
+      {
+        element: "#tour-studio-summary",
+        popover: {
+          title: "📝 Summary",
+          description: "Generates a concise overview of everything in your sources — great for quick revision.",
+        },
+        onHighlightStarted: skipIfHidden("#tour-studio-summary"),
+      },
+      {
+        element: "#tour-studio-quiz",
+        popover: {
+          title: "❓ Quiz",
+          description: "Creates multiple-choice questions from your materials to test what you actually know.",
+        },
+        onHighlightStarted: skipIfHidden("#tour-studio-quiz"),
+      },
+      {
+        element: "#tour-studio-flashcards",
+        popover: {
+          title: "🃏 Flashcards",
+          description: "Spaced-repetition cards pulled from your sources — study smarter, not harder.",
+        },
+        onHighlightStarted: skipIfHidden("#tour-studio-flashcards"),
+      },
+      {
+        element: "#tour-studio-mindmap",
+        popover: {
+          title: "🗺️ Mind Map",
+          description: "A visual map of how concepts connect — great for understanding complex topics at a glance.",
+        },
+        onHighlightStarted: skipIfHidden("#tour-studio-mindmap"),
+      },
+      {
+        element: "#tour-studio-studyguide",
+        popover: {
+          title: "📖 Study Guide",
+          description: "A structured, chapter-style guide through your materials — ideal for deep understanding.",
+        },
+        onHighlightStarted: skipIfHidden("#tour-studio-studyguide"),
+      },
+      {
+        element: "#tour-studio-keyconcepts",
+        popover: {
+          title: "💡 Key Concepts",
+          description: "Extracts the core terms and definitions from your sources into a clean reference list.",
+        },
+        onHighlightStarted: skipIfHidden("#tour-studio-keyconcepts"),
+      },
+      {
+        element: "#tour-studio-podcast",
+        popover: {
+          title: "🎙️ Podcast",
+          description: "Turns your notes into a conversational dialogue script — listen and learn on the go.",
+        },
+        onHighlightStarted: skipIfHidden("#tour-studio-podcast"),
+      },
+    ];
+
     // ── Notebook interior steps — diverge per device ─────────────────────────
     // Mobile: user taps each tab to switch panels; we force-click each tab first.
     // Desktop: all three panels visible at once; just highlight each in order.
@@ -194,17 +254,7 @@ export function useTour() {
             "👆 Tap Studio to generate quizzes, flashcards, summaries, and more.",
             "studio",
           ),
-          {
-            element: "#tour-generate-card",
-            popover: {
-              title: "One-tap study tools",
-              description:
-                "Tap any card to generate that study tool from your sources instantly — quiz, flashcards, podcast, mind map.",
-              side: "top",
-              align: "start",
-            },
-            onHighlightStarted: skipIfHidden("#tour-generate-card"),
-          },
+          ...studioFeatureSteps,
         ]
       : [
           {
@@ -229,17 +279,7 @@ export function useTour() {
             },
             onHighlightStarted: skipIfHidden("#tour-chat-input"),
           },
-          {
-            element: "#tour-generate-card",
-            popover: {
-              title: "Studio — generate study tools",
-              description:
-                "Tap any card to generate quizzes, flashcards, summaries, mind maps, or podcast scripts instantly.",
-              side: "top",
-              align: "start",
-            },
-            onHighlightStarted: skipIfHidden("#tour-generate-card"),
-          },
+          ...studioFeatureSteps,
         ];
 
     driverObj = driver({
