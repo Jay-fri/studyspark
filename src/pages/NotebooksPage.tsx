@@ -505,6 +505,7 @@ function GridCard({
   return (
     <motion.div
       layout
+      id={tourId}
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96 }}
@@ -512,7 +513,6 @@ function GridCard({
       className="relative group"
     >
       <Link
-        id={tourId}
         to={`/notebooks/${nb.id}`}
         onClick={onTourClick}
         className="flex flex-col rounded-2xl overflow-hidden transition-all duration-150"

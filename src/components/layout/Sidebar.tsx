@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/services/supabase";
+import { activeTour } from "@/hooks/useTour";
 
 const NAV_ITEMS = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard",  tourId: "tour-sidebar-home"      },
@@ -137,6 +138,12 @@ export function Sidebar() {
             id={tourId}
             title={sidebarCollapsed ? label : undefined}
             className="block relative group"
+            onClick={() => {
+              if (activeTour.pendingNotebooksNav && to === "/notebooks") {
+                activeTour.pendingNotebooksNav = false;
+                activeTour.waitForThenNext("#tour-notebook-demo-card");
+              }
+            }}
           >
             {({ isActive }) => (
               <div

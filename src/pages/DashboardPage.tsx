@@ -196,9 +196,13 @@ export default function DashboardPage() {
       <motion.div variants={stagger} initial="hidden" animate="show">
         {/* ── Mobile greeting — hidden on md+ since Navbar shows the breadcrumb there ── */}
         <motion.div variants={fadeUp} className="mb-5 md:hidden">
-          <p className="text-[12px] font-medium" style={{ color: "var(--text-dim)" }}>{today}</p>
+          <p
+            className="text-[12px] font-medium"
+            style={{ color: "var(--text-dim)" }}>
+            {today}
+          </p>
           <h1
-            className="text-[28px] font-display leading-tight mt-0.5"
+            className="text-[30px] font-medium leading-tight mt-0.5"
             style={{ color: "var(--text-primary)" }}>
             {greeting(firstName)}
           </h1>
@@ -434,7 +438,9 @@ export default function DashboardPage() {
               {/* Desktop grid */}
               <div className="hidden sm:grid grid-cols-3 gap-3">
                 {recentNotebooks.map((nb, i) => (
-                  <div key={nb.id} id={i === 0 ? "tour-notebook-card" : undefined}>
+                  <div
+                    key={nb.id}
+                    id={i === 0 ? "tour-notebook-card" : undefined}>
                     <NotebookCard nb={nb} />
                   </div>
                 ))}
@@ -443,7 +449,9 @@ export default function DashboardPage() {
               {/* Mobile horizontal scroll */}
               <div className="flex gap-3 overflow-x-auto scrollbar-none -mx-5 px-5 pb-2 sm:hidden">
                 {recentNotebooks.map((nb, i) => (
-                  <div key={nb.id} id={i === 0 ? "tour-notebook-card" : undefined}>
+                  <div
+                    key={nb.id}
+                    id={i === 0 ? "tour-notebook-card" : undefined}>
                     <NotebookCard nb={nb} mobile />
                   </div>
                 ))}
@@ -578,7 +586,8 @@ function NotebookCard({ nb, mobile }: NbCardProps) {
         boxShadow: "var(--shadow-sm)",
       }}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 20px ${color}25`;
+        (e.currentTarget as HTMLElement).style.boxShadow =
+          `0 4px 20px ${color}25`;
         (e.currentTarget as HTMLElement).style.borderColor = `${color}70`;
       }}
       onMouseLeave={(e) => {
@@ -590,29 +599,51 @@ function NotebookCard({ nb, mobile }: NbCardProps) {
         className="px-4 pt-4 pb-3.5 relative overflow-hidden"
         style={
           nb.cover_image_url
-            ? { backgroundImage: `url(${nb.cover_image_url})`, backgroundSize: "cover", backgroundPosition: "center", minHeight: "76px" }
+            ? {
+                backgroundImage: `url(${nb.cover_image_url})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                minHeight: "76px",
+              }
             : { background: `${color}18` }
         }>
         {nb.cover_image_url && (
-          <div className="absolute inset-0" style={{ background: "rgba(5,12,25,0.52)" }} />
+          <div
+            className="absolute inset-0"
+            style={{ background: "rgba(5,12,25,0.52)" }}
+          />
         )}
         {!nb.cover_image_url && (
           <div
             className="absolute -top-4 -right-4 w-16 h-16 rounded-full opacity-30"
-            style={{ background: `radial-gradient(circle, ${color}60, transparent 70%)` }}
+            style={{
+              background: `radial-gradient(circle, ${color}60, transparent 70%)`,
+            }}
           />
         )}
         <div className="relative z-10">
           {nb.icon_url ? (
-            <div className="w-8 h-8 rounded-xl overflow-hidden" style={{ border: "1.5px solid rgba(255,255,255,0.25)" }}>
-              <img src={nb.icon_url} alt="" className="w-full h-full object-cover" />
+            <div
+              className="w-8 h-8 rounded-xl overflow-hidden"
+              style={{ border: "1.5px solid rgba(255,255,255,0.25)" }}>
+              <img
+                src={nb.icon_url}
+                alt=""
+                className="w-full h-full object-cover"
+              />
             </div>
           ) : (
-            <span className="text-2xl leading-none block">{nb.emoji || "📚"}</span>
+            <span className="text-2xl leading-none block">
+              {nb.emoji || "📚"}
+            </span>
           )}
           <p
             className="mt-2 text-sm font-semibold leading-snug line-clamp-2"
-            style={{ color: nb.cover_image_url ? "rgba(255,255,255,0.95)" : "var(--text-primary)" }}>
+            style={{
+              color: nb.cover_image_url
+                ? "rgba(255,255,255,0.95)"
+                : "var(--text-primary)",
+            }}>
             {nb.title}
           </p>
         </div>
@@ -623,7 +654,10 @@ function NotebookCard({ nb, mobile }: NbCardProps) {
         <p className="text-[11px]" style={{ color: "var(--text-dim)" }}>
           {formatDistanceToNow(new Date(nb.updated_at), { addSuffix: true })}
         </p>
-        <div className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+        <div
+          className="w-1.5 h-1.5 rounded-full"
+          style={{ background: color }}
+        />
       </div>
     </Link>
   );

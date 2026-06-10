@@ -1,6 +1,5 @@
 import { driver } from "driver.js";
 import type { DriveStep } from "driver.js";
-import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { useNotebookStore } from "@/stores/notebookStore";
 import { supabase } from "@/services/supabase";
@@ -11,8 +10,11 @@ const TOUR_KEY = "studyai_tour_complete";
 export const activeTour = {
   isActive: false,
   moveNext: () => {},
-  // Set before a force-click tab step; cleared after the user clicks that tab
   pendingTab: null as "sources" | "chat" | "studio" | null,
+  // Set while the tour is on the "click Notebooks nav" step
+  pendingNotebooksNav: false,
+  // Exposed so Sidebar/MobileNav onClick can poll until the demo card renders
+  waitForThenNext: (_selector: string, _maxMs?: number) => {},
 };
 
 function isRendered(selector: string): boolean {
@@ -23,8 +25,6 @@ function isRendered(selector: string): boolean {
 }
 
 export function useTour() {
-  const navigate = useNavigate();
-
   const startTour = () => {
     const isMobile = window.innerWidth < 768;
 
@@ -74,6 +74,8 @@ export function useTour() {
       activeTour.isActive = false;
       activeTour.moveNext = () => {};
       activeTour.pendingTab = null;
+      activeTour.pendingNotebooksNav = false;
+      activeTour.waitForThenNext = () => {};
       Element.prototype.scrollIntoView = origScrollIntoView;
       document.documentElement.style.overflow = savedHtmlOverflow;
       document.body.style.overflow = savedBodyOverflow;
@@ -84,22 +86,30 @@ export function useTour() {
       if (!isRendered(selector)) setTimeout(() => driverObj.moveNext(), 0);
     };
 
-    // Creates "Getting Started" notebook if needed, then navigates to /notebooks list
-    const ensureDemoNotebook = async () => {
+    // Polls until selector is rendered, then advances to the next step (max ~4 s)
+    const waitForElementThenNext = (selector: string, maxMs = 4000) => {
+      const interval = 80;
+      let elapsed = 0;
+      const poll = setInterval(() => {
+        elapsed += interval;
+        if (isRendered(selector) || elapsed >= maxMs) {
+          clearInterval(poll);
+          // Wait for Framer Motion spring to fully settle before driver.js measures position
+          setTimeout(() => {
+            const popoverEl = document.querySelector('.driver-popover');
+            if (popoverEl) (popoverEl as HTMLElement).style.opacity = '1';
+            driverObj.moveNext();
+          }, 400);
+        }
+      }, interval);
+    };
+
+    // Creates "Getting Started" notebook if the user has none — no navigation.
+    // Called while the Notebooks nav step is shown so it's ready before the user clicks.
+    const createDemoNotebookIfNeeded = async () => {
       const userId = useAuthStore.getState().user?.id;
-      if (!userId) {
-        navigate("/notebooks");
-        setTimeout(() => driverObj.moveNext(), 800);
-        return;
-      }
-
-      const existing = useNotebookStore.getState().notebooks[0];
-      if (existing) {
-        navigate("/notebooks");
-        setTimeout(() => driverObj.moveNext(), 800);
-        return;
-      }
-
+      if (!userId) return;
+      if (useNotebookStore.getState().notebooks.length > 0) return;
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: nb } = await (supabase.from("notebooks") as any)
@@ -112,19 +122,8 @@ export function useTour() {
           })
           .select()
           .single();
-
-        if (nb) {
-          useNotebookStore.getState().addNotebook(nb);
-          navigate("/notebooks");
-          setTimeout(() => driverObj.moveNext(), 1000);
-        } else {
-          navigate("/notebooks");
-          setTimeout(() => driverObj.moveNext(), 800);
-        }
-      } catch {
-        navigate("/notebooks");
-        setTimeout(() => driverObj.moveNext(), 800);
-      }
+        if (nb) useNotebookStore.getState().addNotebook(nb);
+      } catch { /* silent — user will see empty state on /notebooks */ }
     };
 
     // ── Force-click tab step helper ──────────────────────────────────────────
@@ -246,7 +245,7 @@ export function useTour() {
     driverObj = driver({
       animate: true,
       smoothScroll: false,
-      allowClose: true,
+      allowClose: false,
       disableActiveInteraction: true,
       overlayOpacity: 0.9,
       stagePadding: 10,
@@ -324,18 +323,27 @@ export function useTour() {
           onHighlightStarted: skipIfHidden(profile),
         },
 
-        // ── 6. Bridge: open notebooks ────────────────────────────────────────
-        // Centered popover — navigates to /notebooks list on "Got it →"
+        // ── 6. Force-click: Notebooks nav ────────────────────────────────────
+        // User must tap the Notebooks link themselves; clicking it navigates via
+        // React Router NavLink. Sidebar/MobileNav onClick then calls waitForThenNext.
         {
+          element: isMobile ? "#tour-nav-notebooks" : "#tour-sidebar-notebooks",
           popover: {
-            title: "Now let's open a notebook",
-            description:
-              "We'll walk you through the core features inside a notebook — sources, chat, and studio.",
+            title: "Open Notebooks",
+            description: "👆 Tap Notebooks to continue the tour.",
+            showButtons: ["close"],
+            side: isMobile ? "top" : "right",
+            align: "start",
           },
-          onNextClick: () => {
-            ensureDemoNotebook();
+          onHighlightStarted: skipIfHidden(isMobile ? "#tour-nav-notebooks" : "#tour-sidebar-notebooks"),
+          onHighlighted: () => {
+            activeTour.pendingNotebooksNav = true;
+            createDemoNotebookIfNeeded();
+            const sel = isMobile ? "#tour-nav-notebooks" : "#tour-sidebar-notebooks";
+            const el = document.querySelector(sel);
+            if (el) el.classList.remove("driver-no-interaction");
           },
-        } as any,
+        },
 
         // ── 7. Demo notebook card — user must tap to open ────────────────────
         {
@@ -344,13 +352,20 @@ export function useTour() {
             title: "Your first notebook 📚",
             description: "👆 Tap this notebook to open it.",
             showButtons: ["close"],
+            side: "bottom",
+            align: "start",
           },
           onHighlightStarted: skipIfHidden("#tour-notebook-demo-card"),
           onHighlighted: () => {
             const el = document.querySelector("#tour-notebook-demo-card");
             if (el) el.classList.remove("driver-no-interaction");
           },
-        },
+          onDeselected: () => {
+            const el = document.querySelector<HTMLElement>("#tour-notebook-demo-card");
+            if (el) el.style.pointerEvents = "";
+          },
+          allowClick: true,
+        } as any,
 
         // ── 8–13 (mobile) or 8–10 (desktop): notebook interior ──────────────
         ...notebookInteriorSteps,
@@ -368,6 +383,7 @@ export function useTour() {
 
     activeTour.isActive = true;
     activeTour.moveNext = () => driverObj.moveNext();
+    activeTour.waitForThenNext = waitForElementThenNext;
 
     driverObj.drive();
   };

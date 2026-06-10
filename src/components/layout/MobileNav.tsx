@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { LayoutDashboard, BookMarked, Library, User, Plus } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { useNotebookStore } from "@/stores/notebookStore";
+import { activeTour } from "@/hooks/useTour";
 
 type Tab = { to: string; icon: React.ElementType; label: string; isFab: boolean; tourId?: string };
 
@@ -75,6 +76,12 @@ export function MobileNav() {
                 "flex-1 flex flex-col items-center justify-center gap-1 relative z-10 transition-colors",
                 isActive ? "text-[#38E0C3]" : "text-text-muted hover:text-text-secondary"
               )}
+              onClick={() => {
+                if (activeTour.pendingNotebooksNav && to === "/notebooks") {
+                  activeTour.pendingNotebooksNav = false;
+                  activeTour.waitForThenNext("#tour-notebook-demo-card");
+                }
+              }}
             >
               <div className="relative">
                 <Icon className="w-5 h-5" />
