@@ -1,3 +1,4 @@
+// Flutterwave v3 inline checkout
 import type { Profile } from "@/types";
 
 declare global {
