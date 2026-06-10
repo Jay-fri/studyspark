@@ -52,10 +52,10 @@ export async function openFlutterwaveCheckout(
 ): Promise<void> {
   await loadScript();
 
-  // VITE_FLUTTERWAVE_PUBLIC_KEY overrides for local dev (test key in .env.local).
-  // Falls back to the live key for production builds.
-  const publicKey = import.meta.env.VITE_FLUTTERWAVE_PUBLIC_KEY || "FLWPUBK-708958c3ae91635ba7cb515957c95f49-X";
-  if (!publicKey) throw new Error("Missing VITE_FLUTTERWAVE_PUBLIC_KEY");
+  // DEV = local `vite dev` → use test key. PROD build → always live key.
+  const publicKey = import.meta.env.DEV
+    ? (import.meta.env.VITE_FLUTTERWAVE_PUBLIC_KEY ?? "FLWPUBK_TEST-7df5282a6c7a3900f7024fb94fd65f2e-X")
+    : "FLWPUBK-708958c3ae91635ba7cb515957c95f49-X";
 
   const shortId = profile.id.replace(/-/g, "").slice(0, 12);
   const txRef   = `SLM-${shortId}-${Date.now()}`;
