@@ -1314,7 +1314,11 @@ function BoardView({
       ) : (
         <Chessboard
           position={displayFen}
-          onPieceDrop={isInteractive && !isReviewing ? onDrop : () => false}
+          onPieceDrop={(sourceSquare, targetSquare) => {
+            if (!isInteractive || isReviewing) return false;
+            onDrop(sourceSquare, targetSquare);
+            return true;
+          }}
           onSquareClick={onSquareClick}
           boardOrientation={orientation}
           animationDuration={200}

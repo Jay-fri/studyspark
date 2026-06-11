@@ -37,6 +37,7 @@ export interface MultiplayerGameRecord extends ChessGameRecord {
   player2_id: string | null;
   game_type: "multiplayer";
   player1_color: "white" | "black";
+  game_over_reason?: string;
 }
 
 export function useMultiplayerChess(
@@ -70,12 +71,12 @@ export function useMultiplayerChess(
     const myDelta = myResult === "win" ? 8 : myResult === "loss" ? -8 : 0;
     const oppDelta = -myDelta;
     const opponentId = record.user_id === profile?.id ? record.player2_id : record.user_id;
-    const updates: Promise<unknown>[] = [];
+    const updates: PromiseLike<void>[] = [];
     if (myDelta !== 0 && profile?.id) {
-      updates.push(supabase.rpc("update_chess_elo", { p_user_id: profile.id, p_delta: myDelta }));
+      updates.push(supabase.rpc("update_chess_elo", { p_user_id: profile.id, p_delta: myDelta }).then(() => {}));
     }
     if (oppDelta !== 0 && opponentId) {
-      updates.push(supabase.rpc("update_chess_elo", { p_user_id: opponentId, p_delta: oppDelta }));
+      updates.push(supabase.rpc("update_chess_elo", { p_user_id: opponentId, p_delta: oppDelta }).then(() => {}));
     }
     await Promise.all(updates);
     // Refresh local profile so the user's own ELO reflects immediately in the UI
@@ -126,7 +127,7 @@ export function useMultiplayerChess(
         (payload) => {
           const rec = payload.new as MultiplayerGameRecord;
 
-          if (rec.status === "declined") {
+          if ((rec.status as string) === "declined") {
             onDeclinedRef.current?.();
             return;
           }
@@ -300,8 +301,8 @@ export function useMultiplayerChess(
 
   const gameStatus = (): string => {
     if (!gameRecord) return "Loading…";
-    if (gameRecord.status === "waiting") return "Waiting for opponent…";
-    if (gameRecord.status === "declined") return "Challenge declined";
+    if ((gameRecord.status as string) === "waiting") return "Waiting for opponent…";
+    if ((gameRecord.status as string) === "declined") return "Challenge declined";
     if (gameRecord.status === "completed") {
       if (gameRecord.result === "win") return "You won! 🎉";
       if (gameRecord.result === "loss") return "You lost";

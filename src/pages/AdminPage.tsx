@@ -11,7 +11,7 @@ import {
   Zap, Search, Gift, BookOpen, ShieldCheck, ShieldOff, UserCog,
   PlusCircle, Loader2, AlertTriangle, Check, X,
   TrendingUp, TrendingDown, Trash2, ToggleLeft, ToggleRight, SlidersHorizontal,
-  MessageSquare, Trophy, Eye,
+  MessageSquare, Eye,
 } from "@/lib/icons";
 import toast from "react-hot-toast";
 import { supabase }      from "@/services/supabase";
@@ -235,9 +235,8 @@ function UserDetailModal({ user, onClose }: { user: Profile; onClose: () => void
   const { data: games, isLoading: gamesLoading } = useQuery({
     queryKey: ["admin-user-games", user.id],
     queryFn: async () => {
-      const [chess, draughts, scrabble] = await Promise.all([
+      const [chess, scrabble] = await Promise.all([
         supabase.from("chess_games").select("id, result, game_type, difficulty, bot_id, winner_id, game_over_reason, moves_count, updated_at").or(`user_id.eq.${user.id},player2_id.eq.${user.id}`).eq("status", "completed").order("updated_at", { ascending: false }).limit(20),
-        supabase.from("draughts_games" as any).select("id, result, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(10).maybeSingle().then(() => ({ data: null })), // graceful if table doesn't exist
         supabase.from("scrabble_games").select("id, score, words_played, status, created_at").eq("user_id", user.id).eq("status", "completed").order("created_at", { ascending: false }).limit(10),
       ]);
       return { chess: chess.data ?? [], scrabble: scrabble.data ?? [] };

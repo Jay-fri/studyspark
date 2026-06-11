@@ -691,9 +691,13 @@ function MultiplayerScrabbleGame({ gameId: gameIdProp }: { gameId?: string }) {
 
   // Merge placed tiles onto board for display
   const displayBoard = gameRow.board.map((row) => [...row]);
+  const displayPlacedThisTurn: { tile: ScrabbleTile; row: number; col: number }[] = [];
   for (const p of placedThisTurn) {
     const tile = myRack.find((t) => t.id === p.tileId);
-    if (tile) displayBoard[p.row][p.col] = tile;
+    if (tile) {
+      displayBoard[p.row][p.col] = tile;
+      displayPlacedThisTurn.push({ tile, row: p.row, col: p.col });
+    }
   }
   const displayRack = myRack.filter((t) => !placedThisTurn.some((p) => p.tileId === t.id));
 
@@ -954,7 +958,7 @@ function MultiplayerScrabbleGame({ gameId: gameIdProp }: { gameId?: string }) {
           <div className="flex-1 min-w-0">
             <ScrabbleBoard
               board={displayBoard}
-              placedThisTurn={placedThisTurn}
+              placedThisTurn={displayPlacedThisTurn}
               onSquareClick={isMyTurn ? handlePlaceTile : () => {}}
               onTileRecall={isMyTurn ? handleRecallTile : () => {}}
               selectedTileId={selectedTileId}

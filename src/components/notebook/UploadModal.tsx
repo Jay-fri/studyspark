@@ -179,7 +179,7 @@ export function UploadModal({ notebookId, onClose, onDone }: Props) {
                       <AlertCircle className="w-3.5 h-3.5 text-brand-danger shrink-0 mt-0.5" />
                       <div className="min-w-0">
                         <p className="text-xs font-medium text-brand-danger truncate">{file.name}</p>
-                        <p className="text-[11px] text-brand-danger/80">{getRejectionReason(errors)}</p>
+                        <p className="text-[11px] text-brand-danger/80">{getRejectionReason(errors as { code: string; message: string }[])}</p>
                       </div>
                     </div>
                   ))}

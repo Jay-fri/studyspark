@@ -382,7 +382,6 @@ export function useScrabble(gameId?: string) {
     state: ScrabbleState
   ): { word: string; positions: { row: number; col: number }[] }[] => {
     if (state.placedThisTurn.length === 0) return [];
-    const placedSet = new Set(state.placedThisTurn.map((p) => `${p.row},${p.col}`));
 
     const getWordAt = (
       startRow: number,
