@@ -5,6 +5,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useDocumentStore, type LegacyDocument } from "@/stores/documentStore";
+import { useAuthStore } from "@/stores/authStore";
+import { groqStream } from "@/services/groq";
 import { cn } from "@/lib/utils";
 import { generateId } from "@/lib/utils";
 
@@ -14,8 +16,9 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { messages, isStreaming, addMessage, setStreaming } = useSessionStore();
+  const { messages, isStreaming, addMessage, setStreaming, appendToLastMessage } = useSessionStore();
   const documents = useDocumentStore((s) => s.documents) as LegacyDocument[];
+  const userId = useAuthStore((s) => s.user?.id);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -28,8 +31,8 @@ export default function ChatPage() {
 
     const userMsg = {
       id:          generateId(),
-      notebook_id: "local",
-      user_id:     "local",
+      notebook_id: "00000000-0000-0000-0000-000000000000", // placeholder — ChatPage is session-only
+      user_id:     userId ?? "00000000-0000-0000-0000-000000000000",
       role:        "user" as const,
       content:     trimmed,
       created_at:  new Date().toISOString(),
@@ -39,8 +42,8 @@ export default function ChatPage() {
 
     const assistantMsg = {
       id:          generateId(),
-      notebook_id: "local",
-      user_id:     "local",
+      notebook_id: "00000000-0000-0000-0000-000000000000",
+      user_id:     userId ?? "00000000-0000-0000-0000-000000000000",
       role:        "assistant" as const,
       content:     "",
       created_at:  new Date().toISOString(),
@@ -48,13 +51,39 @@ export default function ChatPage() {
     addMessage(assistantMsg);
     setStreaming(true);
 
-    // TODO: replace with real streaming API call
-    const mockResponse = "I'm StudyLM, your AI study assistant! Upload a document and I'll help you understand it, answer questions, and create study materials. 🎓";
-    for (const char of mockResponse) {
-      await new Promise((r) => setTimeout(r, 18));
-      useSessionStore.getState().appendToLastMessage(char);
+    // Build context from selected document
+    const activeDoc = selectedDocId
+      ? documents.find((d) => d.id === selectedDocId)
+      : null;
+    const context = activeDoc?.content
+      ? `You are StudyLM, an expert AI study assistant. Use the following document to answer questions accurately:\n\n${activeDoc.content.slice(0, 6000)}`
+      : "You are StudyLM, an expert AI study assistant. No document has been selected — answer from general knowledge and suggest uploading study material.";
+
+    const history = messages
+      .slice(-8)
+      .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
+
+    const groqMessages = [
+      { role: "system" as const, content: context },
+      ...history,
+      { role: "user" as const, content: trimmed },
+    ];
+
+    let fullContent = "";
+    try {
+      for await (const chunk of groqStream(groqMessages)) {
+        fullContent += chunk;
+        appendToLastMessage(chunk);
+      }
+    } catch (err) {
+      const errMsg = "Sorry, I couldn't process your request. Please try again.";
+      appendToLastMessage(errMsg);
+      fullContent = errMsg;
+    } finally {
+      setStreaming(false);
     }
-    setStreaming(false);
+
+    // ChatPage has no notebook context so messages are session-only (not persisted)
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

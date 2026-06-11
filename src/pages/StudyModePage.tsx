@@ -11,6 +11,7 @@ import { useNotebookStore } from "@/stores/notebookStore";
 import { useSRS } from "@/hooks/useSRS";
 import type { AIOutput, Flashcard, QuizQuestion } from "@/types";
 import { cn } from "@/lib/utils";
+import { NotebookIcon, DEFAULT_NOTEBOOK_ICON } from "@/lib/notebookIcons";
 
 type StudyContent = { type: "flashcards"; cards: Flashcard[] } | { type: "quiz"; questions: QuizQuestion[] };
 
@@ -268,8 +269,9 @@ export default function StudyModePage() {
             <X className="w-4 h-4" /> Exit
           </button>
           <span className="text-white/20">|</span>
-          <span className="text-sm text-white/60">
-            {notebook?.emoji ?? "📚"} {notebook?.title ?? "Study Mode"}
+          <span className="flex items-center gap-1.5 text-sm text-white/60">
+            <NotebookIcon value={notebook?.emoji ?? DEFAULT_NOTEBOOK_ICON} size={13} color="rgba(255,255,255,0.6)" />
+            {notebook?.title ?? "Study Mode"}
           </span>
         </div>
 

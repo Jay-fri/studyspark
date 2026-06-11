@@ -1,13 +1,14 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  LayoutDashboard, BookMarked, Library, Settings, Shield, LogOut, PanelLeftClose, PanelLeftOpen, Dna, MessageSquare, Coffee,
+  LayoutDashboard, BookMarked, Library, Settings, Shield, LogOut, Dna, MessageSquare, Coffee,
 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
 import { supabase } from "@/services/supabase";
 import { activeTour } from "@/hooks/useTour";
+import { AnimatedHamburger } from "@/components/ui/AnimatedHamburger";
 
 const NAV_ITEMS = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard",  tourId: "tour-sidebar-home"      },
@@ -73,64 +74,36 @@ export function Sidebar() {
       }}
     >
       {/* ── Logo row ──────────────────────────────────────────────────────── */}
-      <div className="flex items-center h-14 px-3 shrink-0">
-        <img
-          src="/logo.jpg"
-          alt="StudyLM"
-          className="w-7 h-7 rounded-lg object-cover shrink-0"
-        />
+      <div className={cn("flex items-center h-14 shrink-0", sidebarCollapsed ? "justify-center" : "px-3")}>
         <AnimatePresence>
           {!sidebarCollapsed && (
-            <motion.span
-              initial={{ opacity: 0, x: -4 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -4 }}
-              transition={{ duration: 0.13 }}
-              className="ml-2.5 font-display text-sm whitespace-nowrap truncate flex-1"
-              style={{ color: "var(--text-primary)" }}
-            >
-              StudyLM
-            </motion.span>
-          )}
-        </AnimatePresence>
-
-        {/* Collapse toggle */}
-        <AnimatePresence>
-          {!sidebarCollapsed && (
-            <motion.button
+            <motion.div
+              className="flex items-center gap-2.5 flex-1 min-w-0"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.12 }}
-              onClick={toggleSidebarCollapsed}
-              className="p-1.5 rounded-lg shrink-0 transition-colors ml-auto"
-              style={{ color: "var(--text-dim)" }}
-              onMouseEnter={e => { e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "var(--surface-2)"; }}
-              onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "transparent"; }}
-              title="Collapse sidebar"
+              transition={{ duration: 0.15 }}
             >
-              <PanelLeftClose className="w-3.5 h-3.5" />
-            </motion.button>
+              <img src="/logo.jpg" alt="StudyLM" className="w-7 h-7 rounded-lg object-cover shrink-0" />
+              <span className="font-display text-sm whitespace-nowrap truncate" style={{ color: "var(--text-primary)" }}>
+                StudyLM
+              </span>
+            </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Hamburger: centered when collapsed, right-aligned when expanded */}
+        <div className={cn(sidebarCollapsed ? "" : "ml-auto")}>
+          <AnimatedHamburger
+            active={!sidebarCollapsed}
+            onClick={toggleSidebarCollapsed}
+            size={28}
+          />
+        </div>
       </div>
 
       {/* ── Navigation ────────────────────────────────────────────────────── */}
       <nav className="flex-1 px-2 py-2 space-y-0.5 overflow-y-auto scrollbar-none">
-
-        {/* Expand button when collapsed */}
-        {sidebarCollapsed && (
-          <button
-            onClick={toggleSidebarCollapsed}
-            className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors mx-auto mb-2"
-            style={{ color: "var(--text-dim)" }}
-            onMouseEnter={e => { e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "var(--surface-2)"; }}
-            onMouseLeave={e => { e.currentTarget.style.color = "var(--text-dim)"; e.currentTarget.style.background = "transparent"; }}
-            title="Expand sidebar"
-          >
-            <PanelLeftOpen className="w-3.5 h-3.5" />
-          </button>
-        )}
 
         {NAV_ITEMS.map(({ to, icon: Icon, label, tourId }) => (
           <NavLink
@@ -149,32 +122,33 @@ export function Sidebar() {
             {({ isActive }) => (
               <div
                 className={cn(
-                  "relative flex items-center rounded-xl transition-all duration-150",
+                  "relative flex items-center rounded-xl transition-colors duration-150",
                   sidebarCollapsed ? "w-9 h-9 mx-auto justify-center" : "gap-3 px-3 py-2.5"
                 )}
-                style={{
-                  background: isActive ? "rgba(56,224,195,0.1)" : "transparent",
-                  borderLeft: isActive && !sidebarCollapsed ? "none" : undefined,
-                }}
                 onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "var(--surface-2)"; }}
                 onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
               >
-                {/* Active left accent bar */}
-                {isActive && !sidebarCollapsed && (
-                  <span
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full"
-                    style={{ background: "var(--brand-primary)" }}
+                {/* Sliding background pill */}
+                {isActive && (
+                  <motion.div
+                    layoutId="sidebar-pill"
+                    className="absolute inset-0 rounded-[9px] pointer-events-none"
+                    style={{
+                      background: "rgba(56,224,195,0.08)",
+                      border: "0.5px solid rgba(56,224,195,0.18)",
+                    }}
+                    transition={{ type: "spring", stiffness: 350, damping: 30 }}
                   />
                 )}
 
                 <Icon
-                  className="w-[15px] h-[15px] shrink-0"
+                  className="w-[15px] h-[15px] shrink-0 relative z-10"
                   style={{ color: isActive ? "var(--brand-primary)" : "var(--text-muted)" }}
                 />
 
                 {!sidebarCollapsed && (
                   <span
-                    className="text-sm font-medium truncate"
+                    className="text-sm font-medium truncate relative z-10"
                     style={{ color: isActive ? "var(--brand-primary)" : "var(--text-secondary)" }}
                   >
                     {label}
@@ -184,7 +158,7 @@ export function Sidebar() {
                 {/* Active dot when collapsed */}
                 {sidebarCollapsed && isActive && (
                   <span
-                    className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full"
+                    className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full z-10"
                     style={{ background: "var(--brand-primary)" }}
                   />
                 )}
@@ -198,24 +172,28 @@ export function Sidebar() {
             {({ isActive }) => (
               <div
                 className={cn(
-                  "relative flex items-center rounded-xl transition-all duration-150",
+                  "relative flex items-center rounded-xl transition-colors duration-150",
                   sidebarCollapsed ? "w-9 h-9 mx-auto justify-center" : "gap-3 px-3 py-2.5"
                 )}
-                style={{ background: isActive ? "rgba(56,224,195,0.1)" : "transparent" }}
                 onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "var(--surface-2)"; }}
                 onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
               >
-                {isActive && !sidebarCollapsed && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full" style={{ background: "var(--brand-primary)" }} />
+                {isActive && (
+                  <motion.div
+                    layoutId="sidebar-pill"
+                    className="absolute inset-0 rounded-[9px] pointer-events-none"
+                    style={{ background: "rgba(56,224,195,0.08)", border: "0.5px solid rgba(56,224,195,0.18)" }}
+                    transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                  />
                 )}
-                <Shield className="w-[15px] h-[15px] shrink-0" style={{ color: isActive ? "var(--brand-primary)" : "var(--text-muted)" }} />
+                <Shield className="w-[15px] h-[15px] shrink-0 relative z-10" style={{ color: isActive ? "var(--brand-primary)" : "var(--text-muted)" }} />
                 {!sidebarCollapsed && (
-                  <span className="text-sm font-medium" style={{ color: isActive ? "var(--brand-primary)" : "var(--text-secondary)" }}>
+                  <span className="text-sm font-medium relative z-10" style={{ color: isActive ? "var(--brand-primary)" : "var(--text-secondary)" }}>
                     Admin
                   </span>
                 )}
                 {sidebarCollapsed && isActive && (
-                  <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full" style={{ background: "var(--brand-primary)" }} />
+                  <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full z-10" style={{ background: "var(--brand-primary)" }} />
                 )}
               </div>
             )}

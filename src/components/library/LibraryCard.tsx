@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { Trash2, Download, ArrowUpRight } from "@/lib/icons";
 import type { AIOutput, AIOutputType, Notebook } from "@/types";
+import { NotebookIcon, DEFAULT_NOTEBOOK_ICON } from "@/lib/notebookIcons";
 
 export const TYPE_META: Record<AIOutputType, {
   label:  string;
@@ -116,7 +117,7 @@ export function LibraryCard({ output, notebook, onOpen, onDelete, onExport }: Pr
                 <img src={notebook.icon_url} alt="" className="w-full h-full object-cover" />
               </div>
             ) : (
-              <span className="text-xs">{notebook?.emoji ?? "📚"}</span>
+              <NotebookIcon value={notebook?.emoji ?? DEFAULT_NOTEBOOK_ICON} size={13} color={nbColor} />
             )}
             <p
               className="text-xs font-medium truncate"

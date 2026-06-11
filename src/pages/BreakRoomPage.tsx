@@ -1524,6 +1524,7 @@ interface GameCardProps {
 }
 
 function GameCard({ icon, title, subtitle, activeGame, resumeLink, newLink, hasActive }: GameCardProps) {
+  const navigate = useNavigate();
   return (
     <div
       className="rounded-2xl p-7 transition-all duration-150"
@@ -1546,15 +1547,15 @@ function GameCard({ icon, title, subtitle, activeGame, resumeLink, newLink, hasA
       )}
 
       <div className="flex gap-2">
-        <Link
-          to={resumeLink}
-          className="flex-1 py-2.5 px-4 rounded-xl text-sm font-medium text-center transition-all"
-          style={{ background: "rgba(56,224,195,0.12)", border: "0.5px solid rgba(56,224,195,0.3)", color: "#38E0C3" }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(56,224,195,0.18)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(56,224,195,0.12)")}
+        <button
+          onClick={() => navigate(resumeLink)}
+          className="flex-1 py-2.5 px-4 rounded-xl text-sm font-medium transition-all duration-150"
+          style={{ background: "rgba(56,224,195,0.09)", border: "0.5px solid rgba(56,224,195,0.22)", color: "#38E0C3" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(56,224,195,0.15)"; e.currentTarget.style.borderColor = "rgba(56,224,195,0.35)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "rgba(56,224,195,0.09)"; e.currentTarget.style.borderColor = "rgba(56,224,195,0.22)"; }}
         >
           {hasActive ? "Resume →" : "New Game"}
-        </Link>
+        </button>
         {hasActive && (
           <Link
             to={newLink}

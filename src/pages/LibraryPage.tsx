@@ -18,6 +18,7 @@ import {
   exportQuizPDF, exportFlashcardsCSV,
   exportSummaryMarkdown, exportStudyGuidePDF,
 } from "@/lib/exportUtils";
+import { NotebookIcon, DEFAULT_NOTEBOOK_ICON } from "@/lib/notebookIcons";
 
 type SortMode  = "newest" | "oldest";
 type ViewMode  = "grid" | "list";
@@ -358,12 +359,12 @@ export default function LibraryPage() {
                   <div className="absolute inset-0 rounded-xl" style={{ background: "rgba(5,12,25,0.62)" }} />
                 )}
                 <div
-                  className="relative z-10 w-7 h-7 rounded-lg flex items-center justify-center text-base shrink-0 overflow-hidden"
+                  className="relative z-10 w-7 h-7 rounded-lg flex items-center justify-center shrink-0 overflow-hidden"
                   style={nb?.icon_url ? undefined : { background: `${color}22` }}
                 >
                   {nb?.icon_url
                     ? <img src={nb.icon_url} alt="" className="w-full h-full object-cover" />
-                    : (nb?.emoji ?? "📚")
+                    : <NotebookIcon value={nb?.emoji ?? DEFAULT_NOTEBOOK_ICON} size={14} color={color} />
                   }
                 </div>
 

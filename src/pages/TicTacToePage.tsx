@@ -837,6 +837,49 @@ function MultiplayerGame({
     navigate("/break/ttt");
   };
 
+  // Hooks MUST be before any early returns
+  const { showQuit: showQuitMp, setShowQuit: setShowQuitMp } = useBackGuard(
+    gameRecord?.status === "active" && !gameRecord?.winner
+  );
+  const [disconnectedSecs, setDisconnectedSecs] = useState<number | null>(null);
+
+  const tttForfeit = async () => {
+    if (!gameRecord || !profile) return;
+    const winner = gameRecord.player_x_id === profile.id ? "O" : "X";
+    await supabase.from("ttt_games").update({ status: "completed", winner, updated_at: new Date().toISOString() }).eq("id", gameId);
+    onLeave();
+  };
+
+  useEffect(() => {
+    if (gameRecord?.status !== "active" || gameRecord?.winner) return;
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const handleOffline = () => {
+      let secs = 60;
+      setDisconnectedSecs(secs);
+      interval = setInterval(() => {
+        secs -= 1;
+        if (secs <= 0) {
+          if (interval) clearInterval(interval);
+          setDisconnectedSecs(null);
+          tttForfeit();
+        } else {
+          setDisconnectedSecs(secs);
+        }
+      }, 1000);
+    };
+    const handleOnline = () => {
+      if (interval) clearInterval(interval);
+      setDisconnectedSecs(null);
+    };
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
+    return () => {
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
+      if (interval) clearInterval(interval);
+    };
+  }, [gameRecord?.status, gameRecord?.winner]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "#0a1628" }}>
@@ -857,16 +900,21 @@ function MultiplayerGame({
   const winner = (gameRecord.winner as "X" | "O" | "draw" | null) ?? null;
   const isWaiting = gameRecord.status === "waiting";
 
-  const { showQuit: showQuitMp, setShowQuit: setShowQuitMp } = useBackGuard(gameRecord.status === "active" && !winner);
-
   return (
     <>
       {showQuitMp && (
         <QuitGameModal
           message="Quitting will end your multiplayer game."
-          onConfirm={() => { setShowQuitMp(false); onLeave(); }}
+          onConfirm={() => { setShowQuitMp(false); tttForfeit(); }}
           onCancel={() => setShowQuitMp(false)}
         />
+      )}
+      {disconnectedSecs !== null && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-3"
+          style={{ background: "rgba(239,68,68,0.15)", border: "0.5px solid rgba(239,68,68,0.3)", color: "rgba(255,255,255,0.85)" }}>
+          <span>Connection lost — quitting in {disconnectedSecs}s</span>
+          <span className="font-bold text-red-400">{disconnectedSecs}</span>
+        </div>
       )}
       <BoardView
         board={gameRecord.board}

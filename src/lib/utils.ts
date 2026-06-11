@@ -34,7 +34,7 @@ export function getFileExtension(filename: string): string {
 }
 
 export function generateId(): string {
-  return Math.random().toString(36).substring(2, 10);
+  return crypto.randomUUID();
 }
 
 export function pluralize(n: number, singular: string, plural?: string): string {

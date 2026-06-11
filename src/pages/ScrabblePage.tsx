@@ -675,6 +675,44 @@ function MultiplayerScrabbleGame({ gameId: gameIdProp }: { gameId?: string }) {
   }, [gameId]);
 
   const { showQuit: showQuitMp, setShowQuit: setShowQuitMp } = useBackGuard(!loading && gameRow?.status === "active");
+  const [disconnectedSecs, setDisconnectedSecs] = useState<number | null>(null);
+
+  const scrabbleForfeit = async () => {
+    if (!gameRow || !profile) return;
+    const myI = gameRow.player_ids.indexOf(profile.id ?? "");
+    await supabase.from("scrabble_mp_games").update({ status: "completed", winner_idx: myI === 0 ? 1 : 0, updated_at: new Date().toISOString() }).eq("id", gameId);
+    navigate("/break/scrabble");
+  };
+
+  useEffect(() => {
+    if (gameRow?.status !== "active") return;
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const handleOffline = () => {
+      let secs = 60;
+      setDisconnectedSecs(secs);
+      interval = setInterval(() => {
+        secs -= 1;
+        if (secs <= 0) {
+          if (interval) clearInterval(interval);
+          setDisconnectedSecs(null);
+          scrabbleForfeit();
+        } else {
+          setDisconnectedSecs(secs);
+        }
+      }, 1000);
+    };
+    const handleOnline = () => {
+      if (interval) clearInterval(interval);
+      setDisconnectedSecs(null);
+    };
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
+    return () => {
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
+      if (interval) clearInterval(interval);
+    };
+  }, [gameRow?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading || !gameRow) {
     return (
@@ -866,9 +904,16 @@ function MultiplayerScrabbleGame({ gameId: gameIdProp }: { gameId?: string }) {
       {showQuitMp && (
         <QuitGameModal
           message="Quitting will end your multiplayer Scrabble game."
-          onConfirm={() => { setShowQuitMp(false); navigate("/break/scrabble"); }}
+          onConfirm={() => { setShowQuitMp(false); scrabbleForfeit(); }}
           onCancel={() => setShowQuitMp(false)}
         />
+      )}
+      {disconnectedSecs !== null && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-3"
+          style={{ background: "rgba(239,68,68,0.15)", border: "0.5px solid rgba(239,68,68,0.3)", color: "rgba(255,255,255,0.85)" }}>
+          <span>Connection lost — quitting in {disconnectedSecs}s</span>
+          <span className="font-bold text-red-400">{disconnectedSecs}</span>
+        </div>
       )}
     <div className="relative px-4 sm:px-6 py-6 max-w-6xl mx-auto pb-28 md:pb-6">
       {/* Header */}

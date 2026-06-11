@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { MintShimmerButton } from "@/components/ui/MintShimmerButton";
 import { useQuery } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
 import { useSRS } from "@/hooks/useSRS";
@@ -12,6 +13,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { StreakBadge } from "@/components/games/StreakBadge";
 import type { AIOutput } from "@/types";
 import toast from "react-hot-toast";
+import { NotebookIcon, DEFAULT_NOTEBOOK_ICON } from "@/lib/notebookIcons";
 
 const stagger = {
   hidden: { opacity: 0 },
@@ -100,6 +102,7 @@ export default function DashboardPage() {
   const { setPaymentModalOpen } = useUIStore();
   const { getDueCards } = useSRS();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const userId = profile?.id;
 
@@ -411,22 +414,11 @@ export default function DashboardPage() {
             </div>
 
             {/* Top up button */}
-            <button
+            <MintShimmerButton
               onClick={() => setPaymentModalOpen(true)}
-              className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:opacity-90"
-              style={{
-                background: "rgba(56,224,195,0.15)",
-                border: "0.5px solid rgba(56,224,195,0.35)",
-                color: "#38E0C3",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(56,224,195,0.25)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "rgba(56,224,195,0.15)";
-              }}>
+              className="shrink-0 px-3 py-1.5 text-xs">
               Top up
-            </button>
+            </MintShimmerButton>
           </div>
         </motion.div>
 
@@ -608,11 +600,15 @@ export default function DashboardPage() {
               <p className="text-sm" style={{ color: "var(--text-muted)" }}>
                 Create your first to get started
               </p>
-              <Link
-                to="/notebooks"
-                className="mt-5 px-4 py-2 rounded-xl text-white text-sm font-semibold transition-opacity hover:opacity-90 gradient-brand">
+              <button
+                onClick={() => navigate("/notebooks")}
+                className="mt-5 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
+                style={{ background: "rgba(56,224,195,0.09)", border: "0.5px solid rgba(56,224,195,0.22)", color: "#38E0C3" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(56,224,195,0.15)"; e.currentTarget.style.borderColor = "rgba(56,224,195,0.35)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgba(56,224,195,0.09)"; e.currentTarget.style.borderColor = "rgba(56,224,195,0.22)"; }}
+              >
                 Create notebook
-              </Link>
+              </button>
             </div>
           )}
         </motion.div>
@@ -768,9 +764,12 @@ function NotebookCard({ nb, mobile }: NbCardProps) {
               />
             </div>
           ) : (
-            <span className="text-2xl leading-none block">
-              {nb.emoji || "📚"}
-            </span>
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: `${color}28`, border: `0.5px solid ${color}40` }}
+            >
+              <NotebookIcon value={nb.emoji || DEFAULT_NOTEBOOK_ICON} size={17} color={color} />
+            </div>
           )}
           <p
             className="mt-2 text-sm font-semibold leading-snug line-clamp-2"

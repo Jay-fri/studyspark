@@ -46,7 +46,7 @@ export function CommandPalette() {
   const corpus = useMemo<SearchItem[]>(() => {
     const nbs: SearchItem[] = notebooks.map((nb: Notebook) => ({
       id:       nb.id,
-      title:    `${nb.emoji} ${nb.title}`,
+      title:    nb.title,
       subtitle: nb.description ?? "Notebook",
       group:    "Notebooks",
       href:     `/notebooks/${nb.id}`,

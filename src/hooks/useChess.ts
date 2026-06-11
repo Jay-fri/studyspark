@@ -150,6 +150,8 @@ export function useChess(
   const onMoveRef = useRef(opts?.onMove);
   onGameOverRef.current = opts?.onGameOver;
   onMoveRef.current = opts?.onMove;
+  // Prevent same move from triggering sound twice (e.g. Realtime echo)
+  const lastSoundMoveCountRef = useRef(-1);
 
   const profile = useAuthStore((s) => s.profile);
   const { recordActivity } = useStreak();
@@ -320,8 +322,12 @@ export function useChess(
     setGame(gameCopy);
     buildMoveHistory(gameCopy);
 
-    // Fire onMove callback for sounds
-    onMoveRef.current?.(!!moveResult?.captured, gameCopy.inCheck());
+    // Fire onMove callback for sounds (deduped by move count)
+    const aiMoveCount = gameCopy.history().length;
+    if (aiMoveCount !== lastSoundMoveCountRef.current) {
+      lastSoundMoveCountRef.current = aiMoveCount;
+      onMoveRef.current?.(!!moveResult?.captured, gameCopy.inCheck());
+    }
 
     const isOver = gameCopy.isGameOver();
     const reason = isOver ? getGameOverReason(gameCopy) : undefined;
@@ -374,8 +380,12 @@ export function useChess(
     buildMoveHistory(gameCopy);
     setCurrentMoveIndex(-1);
 
-    // Fire onMove callback for sounds
-    onMoveRef.current?.(!!move.captured, gameCopy.inCheck());
+    // Fire onMove callback for sounds (deduped by move count)
+    const playerMoveCount = gameCopy.history().length;
+    if (playerMoveCount !== lastSoundMoveCountRef.current) {
+      lastSoundMoveCountRef.current = playerMoveCount;
+      onMoveRef.current?.(!!move.captured, gameCopy.inCheck());
+    }
 
     const isOver = gameCopy.isGameOver();
     const reason = isOver ? getGameOverReason(gameCopy) : undefined;

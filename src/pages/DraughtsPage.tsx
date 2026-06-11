@@ -436,6 +436,49 @@ function MultiplayerDraughtsGame({ gameId }: { gameId: string }) {
     fetchGame();
   };
 
+  // Hook MUST be before any early returns
+  const { showQuit: showQuitMp, setShowQuit: setShowQuitMp } = useBackGuard(gameRow?.status === "active");
+  const [disconnectedSecs, setDisconnectedSecs] = useState<number | null>(null);
+
+  const forfeit = async () => {
+    if (!gameRow || !profile) return;
+    const myP: Player | null = profile.id === gameRow.player1_id ? "player1" : profile.id === gameRow.player2_id ? "player2" : null;
+    if (!myP) return;
+    const winner: Player = myP === "player1" ? "player2" : "player1";
+    await supabase.from("draughts_games").update({ status: "completed", winner, updated_at: new Date().toISOString() }).eq("id", gameId);
+    navigate("/break/draughts");
+  };
+
+  useEffect(() => {
+    if (gameRow?.status !== "active") return;
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const handleOffline = () => {
+      let secs = 60;
+      setDisconnectedSecs(secs);
+      interval = setInterval(() => {
+        secs -= 1;
+        if (secs <= 0) {
+          if (interval) clearInterval(interval);
+          setDisconnectedSecs(null);
+          forfeit();
+        } else {
+          setDisconnectedSecs(secs);
+        }
+      }, 1000);
+    };
+    const handleOnline = () => {
+      if (interval) clearInterval(interval);
+      setDisconnectedSecs(null);
+    };
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
+    return () => {
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
+      if (interval) clearInterval(interval);
+    };
+  }, [gameRow?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (loading || !gameRow) {
     return <div className="flex items-center justify-center min-h-96"><div className="w-6 h-6 rounded-full border-2 border-transparent animate-spin" style={{ borderTopColor: "#38E0C3" }} /></div>;
   }
@@ -508,8 +551,6 @@ function MultiplayerDraughtsGame({ gameId }: { gameId: string }) {
     ? gameRow.winner === myPlayer ? "win" : "loss"
     : null;
 
-  const { showQuit: showQuitMp, setShowQuit: setShowQuitMp } = useBackGuard(gameRow.status === "active" && !result);
-
   // Accept challenge banner
   if (gameRow.status === "waiting" && myPlayer === "player2") {
     return (
@@ -519,7 +560,7 @@ function MultiplayerDraughtsGame({ gameId }: { gameId: string }) {
           <p className="text-sm font-medium mb-1" style={{ color: "#fff" }}>
             {gameRow.p1_username ?? "Someone"} challenged you to Draughts!
           </p>
-          <p className="text-xs mb-6" style={{ color: "rgba(255,255,255,0.35)" }}>You play Red pieces · They play Mint</p>
+          <p className="text-xs mb-6" style={{ color: "rgba(255,255,255,0.35)" }}>You play Mint pieces · They play Red</p>
           <div className="flex gap-2">
             <button onClick={handleAccept} className="flex-1 py-2.5 rounded-xl text-sm font-medium" style={{ background: "rgba(56,224,195,0.12)", border: "0.5px solid rgba(56,224,195,0.3)", color: "#38E0C3" }}>Accept</button>
             <button onClick={async () => { await supabase.from("draughts_games").update({ status: "declined" }).eq("id", gameId); navigate("/break/draughts"); }}
@@ -537,9 +578,16 @@ function MultiplayerDraughtsGame({ gameId }: { gameId: string }) {
       {showQuitMp && (
         <QuitGameModal
           message="Quitting will end your multiplayer game. Your opponent will win by forfeit."
-          onConfirm={() => { setShowQuitMp(false); navigate("/break/draughts"); }}
+          onConfirm={() => { setShowQuitMp(false); forfeit(); }}
           onCancel={() => setShowQuitMp(false)}
         />
+      )}
+      {disconnectedSecs !== null && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-3"
+          style={{ background: "rgba(239,68,68,0.15)", border: "0.5px solid rgba(239,68,68,0.3)", color: "rgba(255,255,255,0.85)" }}>
+          <span>Connection lost — quitting in {disconnectedSecs}s</span>
+          <span className="font-bold text-red-400">{disconnectedSecs}</span>
+        </div>
       )}
       <DraughtsBoard board={board} selected={selected} highlights={highlights}
         humanCount={myCount} opponentCount={oppCount} myPlayer={myPlayer ?? "player1"}
@@ -619,7 +667,10 @@ function DraughtsBoard({
       <div className="w-full max-w-sm mx-auto rounded-xl overflow-hidden" style={{ aspectRatio: "1", border: "0.5px solid rgba(56,224,195,0.15)" }}>
         <div className="w-full h-full" style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gridTemplateRows: "repeat(8, 1fr)" }}>
           {Array.from({ length: 64 }, (_, idx) => {
-            const r = Math.floor(idx / 8), c = idx % 8;
+            const dR = Math.floor(idx / 8), dC = idx % 8;
+            // Flip board for player2 so they see their pieces at the bottom
+            const r = myPlayer === "player2" ? 7 - dR : dR;
+            const c = myPlayer === "player2" ? 7 - dC : dC;
             const isDark = (r + c) % 2 === 1;
             const piece = board[r][c];
             const isSel = selected?.[0] === r && selected?.[1] === c;

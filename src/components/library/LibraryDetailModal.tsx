@@ -5,6 +5,7 @@ import { Portal } from "@/components/shared/Portal";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import type { AIOutput, AIOutputContent, Notebook } from "@/types";
+import { NotebookIcon, DEFAULT_NOTEBOOK_ICON } from "@/lib/notebookIcons";
 import { TYPE_META } from "./LibraryCard";
 import { SummaryView }       from "@/components/study/SummaryView";
 import { QuizView }           from "@/components/study/QuizView";
@@ -94,9 +95,12 @@ export function LibraryDetailModal({ output, notebook, onClose }: Props) {
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-[var(--text-primary)] truncate">
-                  {notebook?.emoji ?? "📚"} {notebook?.title ?? "Notebook"} — {meta?.label}
-                </p>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <NotebookIcon value={notebook?.emoji ?? DEFAULT_NOTEBOOK_ICON} size={14} color="rgba(255,255,255,0.6)" />
+                  <p className="text-sm font-semibold text-[var(--text-primary)] truncate">
+                    {notebook?.title ?? "Notebook"} — {meta?.label}
+                  </p>
+                </div>
                 <p className="text-xs text-[var(--text-muted)]">
                   Generated {output ? format(new Date(output.updated_at), "MMM d, yyyy") : ""}
                 </p>

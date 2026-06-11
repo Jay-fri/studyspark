@@ -35,8 +35,8 @@ export function useGroq() {
         created_at:  new Date().toISOString(),
       };
       addChatMessage(userMsg);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase.from("chat_messages") as any).insert(userMsg);
+      const { error: userInsertErr } = await (supabase.from("chat_messages") as any).insert(userMsg);
+      if (userInsertErr) console.error("[chat] failed to save user message:", userInsertErr.message);
 
       const assistantMsg: ChatMessage = {
         id:          generateId(),
@@ -107,8 +107,9 @@ export function useGroq() {
         if (pendingRef.current) { appendToLastMessage(pendingRef.current); pendingRef.current = ""; }
 
         // Persist completed assistant message
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase.from("chat_messages") as any).insert({ ...assistantMsg, content: fullContent });
+        const { error: asstInsertErr } = await (supabase.from("chat_messages") as any)
+          .insert({ ...assistantMsg, content: fullContent });
+        if (asstInsertErr) console.error("[chat] failed to save assistant message:", asstInsertErr.message);
       } finally {
         setIsStreaming(false);
       }

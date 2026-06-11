@@ -21,6 +21,7 @@ import { UploadModal } from "./UploadModal";
 import { cn } from "@/lib/utils";
 import type { Source } from "@/types";
 import toast from "react-hot-toast";
+import { NotebookIcon, DEFAULT_NOTEBOOK_ICON } from "@/lib/notebookIcons";
 
 const TYPE_ICON: Record<Source["type"], React.ElementType> = {
   pdf:  FileText,
@@ -229,7 +230,7 @@ export function SourcePanel({ notebookId, collapsed, onCollapse }: Props) {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3.5 border-b border-border">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="text-xl shrink-0">{activeNotebook?.emoji ?? "📚"}</span>
+              <NotebookIcon value={activeNotebook?.emoji ?? DEFAULT_NOTEBOOK_ICON} size={18} color="var(--brand-primary)" className="shrink-0" />
               <p className="text-sm font-semibold text-text-primary truncate">
                 {activeNotebook?.title ?? "Notebook"}
               </p>

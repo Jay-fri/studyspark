@@ -7,6 +7,9 @@ import {
   Plus, Loader2, X, Search,
   Pencil, Copy, Trash2, LayoutGrid, List, ImagePlus,
 } from "@/lib/icons";
+import {
+  NOTEBOOK_ICON_SET, NotebookIcon, DEFAULT_NOTEBOOK_ICON, isIconKey,
+} from "@/lib/notebookIcons";
 import { useNotebooks } from "@/hooks/useNotebook";
 import { useNotebookStore } from "@/stores/notebookStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -16,12 +19,6 @@ import type { Notebook } from "@/types";
 import toast from "react-hot-toast";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
-const EMOJI_OPTIONS = [
-  "📚","📖","🧠","🔬","💡","📝","🎯","🏆","⚗️","🌐",
-  "🧮","📊","🔭","💻","🎨","✏️","🔖","🗒️","🔑","🌿",
-  "🧬","🦠","⚡","🌍","🏛️","🎭","🎵","🧪","🔐","🌟",
-  "🪐","🔮","🧲","📡","🗺️","🧩","🎲","💎","🌊","🔥",
-];
 
 const COLOR_OPTIONS = [
   { hex: "#38E0C3", name: "Mint"    },
@@ -97,7 +94,7 @@ function NotebookModal({
 
   const [title,          setTitle]          = useState(initial?.title         ?? "");
   const [desc,           setDesc]           = useState(initial?.description   ?? "");
-  const [emoji,          setEmoji]          = useState(initial?.emoji         ?? "📚");
+  const [emoji,          setEmoji]          = useState(initial?.emoji         ?? DEFAULT_NOTEBOOK_ICON);
   const [color,          setColor]          = useState(initial?.color         ?? "#38E0C3");
   const [coverUrl,       setCoverUrl]       = useState<string | null>(initial?.cover_image_url ?? null);
   const [iconUrl,        setIconUrl]        = useState<string | null>(initial?.icon_url ?? null);
@@ -215,7 +212,7 @@ function NotebookModal({
           {/* Icon — overlaps cover bottom edge */}
           <div className="absolute" style={{ bottom: "-30px", left: "24px", zIndex: 20 }}>
             <div
-              className="relative w-[60px] h-[60px] rounded-2xl flex items-center justify-center text-3xl overflow-hidden transition-all cursor-pointer"
+              className="relative w-[60px] h-[60px] rounded-2xl flex items-center justify-center overflow-hidden transition-all cursor-pointer"
               style={iconUrl
                 ? { border: "3px solid #0f1e35" }
                 : { background: color, boxShadow: `0 4px 20px ${color}40`, border: "3px solid #0f1e35" }
@@ -225,7 +222,7 @@ function NotebookModal({
             >
               {iconUrl
                 ? <img src={iconUrl} alt="" className="w-full h-full object-cover" />
-                : <span>{emoji}</span>
+                : <NotebookIcon value={emoji} size={28} color={isIconKey(emoji) ? "rgba(255,255,255,0.95)" : undefined} />
               }
               {/* Upload overlay hint */}
               <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity rounded-[13px]" style={{ background: "rgba(0,0,0,0.55)" }}>
@@ -320,26 +317,34 @@ function NotebookModal({
             )}
           </AnimatePresence>
 
-          {/* ── Emoji picker — open by default ───────────────────────────── */}
+          {/* ── Icon picker ───────────────────────────────────────────── */}
           <div className="px-4 sm:px-5" style={{ paddingTop: "46px", borderBottom: "0.5px solid rgba(255,255,255,0.07)" }}>
             <div className="pb-4">
               <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "rgba(255,255,255,0.3)" }}>
                 Choose icon
               </p>
-              <div className="grid grid-cols-8 sm:grid-cols-10 gap-1.5 mb-3">
-                {EMOJI_OPTIONS.map(e => (
-                  <button
-                    key={e}
-                    onClick={() => { setEmoji(e); setIconUrl(null); }}
-                    className="aspect-square rounded-xl text-lg flex items-center justify-center transition-all"
-                    style={emoji === e && !iconUrl
-                      ? { background: color, transform: "scale(1.12)" }
-                      : { background: "rgba(255,255,255,0.06)" }
-                    }
-                  >
-                    {e}
-                  </button>
-                ))}
+              <div className="grid grid-cols-6 gap-2 mb-3">
+                {NOTEBOOK_ICON_SET.map(({ key, icon: Icon, label }) => {
+                  const isSelected = emoji === key && !iconUrl;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => { setEmoji(key); setIconUrl(null); }}
+                      title={label}
+                      className="aspect-square rounded-xl flex items-center justify-center transition-all duration-150"
+                      style={isSelected
+                        ? { background: color, transform: "scale(1.1)", border: `0.5px solid ${color}` }
+                        : { background: "rgba(255,255,255,0.05)", border: "0.5px solid rgba(255,255,255,0.08)" }
+                      }
+                    >
+                      <Icon
+                        size={18}
+                        strokeWidth={1.75}
+                        style={{ color: isSelected ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.45)" }}
+                      />
+                    </button>
+                  );
+                })}
               </div>
               <button
                 onClick={() => iconInputRef.current?.click()}
@@ -537,7 +542,12 @@ function GridCard({
                 <img src={nb.icon_url} alt="" className="w-full h-full object-cover" />
               </div>
             ) : (
-              <span className="text-2xl leading-none">{nb.emoji || "📚"}</span>
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 group-hover:scale-105"
+                style={{ background: `${color}28`, border: `0.5px solid ${color}40` }}
+              >
+                <NotebookIcon value={nb.emoji || DEFAULT_NOTEBOOK_ICON} size={17} color={color} />
+              </div>
             )}
           </div>
         </div>
@@ -608,12 +618,12 @@ function ListRow({
         onMouseLeave={e => e.currentTarget.style.background = "transparent"}
       >
         <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 overflow-hidden"
-          style={nb.icon_url ? undefined : { background: `${color}18` }}
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 overflow-hidden transition-all duration-200 group-hover:scale-105"
+          style={nb.icon_url ? undefined : { background: `${color}1e`, border: `0.5px solid ${color}38` }}
         >
           {nb.icon_url
             ? <img src={nb.icon_url} alt="" className="w-full h-full object-cover" />
-            : <span className="text-xl">{nb.emoji || "📚"}</span>
+            : <NotebookIcon value={nb.emoji || DEFAULT_NOTEBOOK_ICON} size={20} color={color} />
           }
         </div>
         <div className="flex-1 min-w-0">

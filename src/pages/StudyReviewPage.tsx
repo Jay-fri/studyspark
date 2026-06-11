@@ -7,6 +7,7 @@ import { supabase } from "@/services/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { useSRS } from "@/hooks/useSRS";
 import type { AIOutput, Flashcard } from "@/types";
+import { NotebookIcon, DEFAULT_NOTEBOOK_ICON } from "@/lib/notebookIcons";
 
 interface DueCard {
   card:           Flashcard;
@@ -158,8 +159,9 @@ export default function StudyReviewPage() {
         {current && index < dueCards.length && (
           <div className="w-full max-w-lg flex flex-col gap-6">
             {/* Source */}
-            <p className="text-center text-xs text-[var(--text-muted)]">
-              {current.notebookEmoji} {current.notebookTitle}
+            <p className="flex items-center justify-center gap-1.5 text-xs text-[var(--text-muted)]">
+              <NotebookIcon value={current.notebookEmoji || DEFAULT_NOTEBOOK_ICON} size={12} color="var(--text-muted)" />
+              {current.notebookTitle}
             </p>
 
             {/* Flip card */}

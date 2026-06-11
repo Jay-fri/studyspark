@@ -60,6 +60,7 @@ export function useMultiplayerChess(
   onGameOverRef.current = opts?.onGameOver;
   onMoveRef.current = opts?.onMove;
   onDeclinedRef.current = opts?.onDeclined;
+  const lastSoundMoveCountRef = useRef(-1);
   // Tracks whether THIS client already fired the game-over callback locally.
   // Used to skip the Realtime echo (which carries the OTHER player's result).
   const gameOverFiredRef = useRef(false);
@@ -138,7 +139,9 @@ export function useMultiplayerChess(
           if (chess.turn() === myColorChar && rec.status === "active") {
             const history = chess.history({ verbose: true });
             const lastMove = history[history.length - 1];
-            if (lastMove) {
+            const moveCount = history.length;
+            if (lastMove && moveCount !== lastSoundMoveCountRef.current) {
+              lastSoundMoveCountRef.current = moveCount;
               onMoveRef.current?.(!!lastMove.captured, chess.inCheck());
             }
           }
@@ -216,8 +219,12 @@ export function useMultiplayerChess(
     setMoveHistory(moves);
     setCurrentMoveIndex(-1);
 
-    // Play local sound
-    onMoveRef.current?.(!!move.captured, gameCopy.inCheck());
+    // Play local sound (deduped by move count)
+    const mp_moveCount = gameCopy.history().length;
+    if (mp_moveCount !== lastSoundMoveCountRef.current) {
+      lastSoundMoveCountRef.current = mp_moveCount;
+      onMoveRef.current?.(!!move.captured, gameCopy.inCheck());
+    }
 
     const isOver = gameCopy.isGameOver();
     const reason = isOver ? getGameOverReason(gameCopy) : undefined;

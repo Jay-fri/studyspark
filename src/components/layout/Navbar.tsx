@@ -1,10 +1,9 @@
 import { useState, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useLocation, Link, useNavigate } from "react-router-dom";
+import { useLocation, Link, NavLink, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import {
-  Menu,
   Search,
   Bell,
   ChevronRight,
@@ -19,7 +18,9 @@ import {
   Dna,
   Shield,
   MessageSquare,
+  Coffee,
 } from "@/lib/icons";
+import { AnimatedHamburger } from "@/components/ui/AnimatedHamburger";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -57,7 +58,7 @@ function useBreadcrumb() {
       if (i > 0 && segments[i - 1] === "notebooks") {
         const nb = (activeNotebook?.id === seg ? activeNotebook : null)
           ?? notebooks.find((n) => n.id === seg);
-        label = nb ? `${nb.emoji ? nb.emoji + " " : ""}${nb.title}` : "Notebook";
+        label = nb ? nb.title : "Notebook";
       } else {
         label = seg.charAt(0).toUpperCase() + seg.slice(1);
       }
@@ -72,6 +73,7 @@ const MOBILE_NAV = [
   { to: "/notebooks", icon: BookMarked,       label: "Notebooks"  },
   { to: "/library",   icon: Library,          label: "Library"    },
   { to: "/anatomy",   icon: Dna,              label: "Anatomy 3D" },
+  { to: "/break",     icon: Coffee,           label: "Break Room" },
   { to: "/feedback",  icon: MessageSquare,    label: "Feedback"   },
   { to: "/settings",  icon: Settings,         label: "Settings"   },
 ];
@@ -116,13 +118,14 @@ export function Navbar() {
           WebkitBackdropFilter: "blur(20px)",
         }}
       >
-        {/* Hamburger (mobile — kept for drawer access even though bottom nav is primary) */}
-        <button
-          onClick={() => setMobileDrawerOpen(true)}
-          className="md:hidden p-2 -ml-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-1 transition-colors"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+        {/* Hamburger (mobile) — animates to × when drawer is open */}
+        <div className="md:hidden -ml-1">
+          <AnimatedHamburger
+            active={mobileDrawerOpen}
+            onClick={() => setMobileDrawerOpen(!mobileDrawerOpen)}
+            size={36}
+          />
+        </div>
 
         {/* Breadcrumb */}
         <nav className="flex items-center gap-1 flex-1 min-w-0">
@@ -374,115 +377,180 @@ export function Navbar() {
         </div>
       </header>
 
-      {/* Mobile Drawer */}
-      <AnimatePresence>
-        {mobileDrawerOpen && (
-          <motion.div
-            className="md:hidden fixed inset-0 z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            {/* Backdrop */}
-            <motion.div
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-              onClick={() => setMobileDrawerOpen(false)}
-            />
+      {/* Mobile Drawer — portaled to body to escape the z-1 stacking context in AppShell.
+           The backdrop starts at top:56px so the topbar hamburger stays clickable above it. */}
+      {createPortal(
+        <AnimatePresence>
+          {mobileDrawerOpen && (
+            <>
+              {/* Backdrop — sits below the 56px header, tapping dismisses */}
+              <motion.div
+                key="mob-drawer-backdrop"
+                className="fixed left-0 right-0 bottom-0 z-[150]"
+                style={{
+                  top: "56px",
+                  background: "rgba(4,10,20,0.55)",
+                  backdropFilter: "blur(4px)",
+                  WebkitBackdropFilter: "blur(4px)",
+                }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setMobileDrawerOpen(false)}
+              />
 
-            {/* Drawer panel */}
-            <motion.aside
-              className="absolute left-0 top-0 bottom-0 w-72 bg-surface-0 border-r border-border flex flex-col shadow-2xl"
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", stiffness: 400, damping: 35 }}
-            >
-              {/* Drawer header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              {/* Floating frosted glass panel */}
+              <motion.aside
+                key="mob-drawer-panel"
+                className="fixed z-[151] flex flex-col overflow-hidden"
+                style={{
+                  top: "60px",
+                  left: "12px",
+                  bottom: "12px",
+                  width: "268px",
+                  borderRadius: "16px",
+                  background: "rgba(8,16,32,0.88)",
+                  backdropFilter: "blur(32px) saturate(160%)",
+                  WebkitBackdropFilter: "blur(32px) saturate(160%)",
+                  border: "0.5px solid rgba(255,255,255,0.11)",
+                }}
+                initial={{ x: "-120%", opacity: 0.8 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: "-120%", opacity: 0.8 }}
+                transition={{ type: "spring", stiffness: 420, damping: 38, mass: 0.85 }}
+              >
+              {/* Header */}
+              <div
+                className="flex items-center justify-between px-5 h-14 shrink-0"
+                style={{ borderBottom: "0.5px solid rgba(255,255,255,0.07)" }}
+              >
                 <div className="flex items-center gap-2.5">
-                  <img
-                    src="/logo.jpg"
-                    alt="StudyLM"
-                    className="w-8 h-8 rounded-xl object-cover bg-white"
-                  />
-                  <span className="font-display text-lg text-text-primary">StudyLM</span>
+                  <img src="/logo.jpg" alt="StudyLM" className="w-7 h-7 rounded-lg object-cover" />
+                  <span className="font-display text-[15px]" style={{ color: "rgba(255,255,255,0.9)" }}>StudyLM</span>
                 </div>
                 <button
                   onClick={() => setMobileDrawerOpen(false)}
-                  className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-1 transition-colors"
+                  className="p-1.5 rounded-lg transition-colors duration-150"
+                  style={{ color: "rgba(255,255,255,0.35)" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.75)")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.35)")}
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Drawer nav */}
-              <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+              {/* Nav links with active state */}
+              <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
                 {MOBILE_NAV.map(({ to, icon: Icon, label }) => (
-                  <Link
+                  <NavLink
                     key={to}
                     to={to}
                     onClick={() => setMobileDrawerOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-1 transition-colors"
+                    className="block"
                   >
-                    <Icon className="w-4 h-4" />
-                    {label}
-                  </Link>
+                    {({ isActive }) => (
+                      <div
+                        className="relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150"
+                        style={{ color: isActive ? "#38E0C3" : "rgba(255,255,255,0.52)" }}
+                        onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = "rgba(255,255,255,0.85)"; }}
+                        onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = "rgba(255,255,255,0.52)"; }}
+                      >
+                        {isActive && (
+                          <motion.div
+                            layoutId="drawer-active-pill"
+                            className="absolute inset-0 rounded-xl pointer-events-none"
+                            style={{ background: "rgba(56,224,195,0.07)", border: "0.5px solid rgba(56,224,195,0.18)" }}
+                            transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                          />
+                        )}
+                        <Icon className="w-[15px] h-[15px] relative z-10 shrink-0" style={{ color: isActive ? "#38E0C3" : "rgba(255,255,255,0.38)" }} />
+                        <span className="relative z-10">{label}</span>
+                        {isActive && (
+                          <span className="ml-auto w-1.5 h-1.5 rounded-full relative z-10 shrink-0" style={{ background: "#38E0C3" }} />
+                        )}
+                      </div>
+                    )}
+                  </NavLink>
                 ))}
                 {isAdmin && (
-                  <Link
-                    to="/admin"
-                    onClick={() => setMobileDrawerOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-surface-1 transition-colors"
-                  >
-                    <Shield className="w-4 h-4" />
-                    Admin Panel
-                  </Link>
+                  <NavLink to="/admin" onClick={() => setMobileDrawerOpen(false)} className="block">
+                    {({ isActive }) => (
+                      <div
+                        className="relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150"
+                        style={{ color: isActive ? "#38E0C3" : "rgba(255,255,255,0.52)" }}
+                      >
+                        {isActive && (
+                          <motion.div
+                            layoutId="drawer-active-pill"
+                            className="absolute inset-0 rounded-xl pointer-events-none"
+                            style={{ background: "rgba(56,224,195,0.07)", border: "0.5px solid rgba(56,224,195,0.18)" }}
+                            transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                          />
+                        )}
+                        <Shield className="w-[15px] h-[15px] relative z-10" style={{ color: isActive ? "#38E0C3" : "rgba(255,255,255,0.38)" }} />
+                        <span className="relative z-10">Admin Panel</span>
+                        {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full relative z-10" style={{ background: "#38E0C3" }} />}
+                      </div>
+                    )}
+                  </NavLink>
                 )}
               </nav>
 
-              {/* Drawer token section */}
-              <div className="px-4 py-4 border-t border-border space-y-3">
-                <div className="flex items-center justify-between bg-surface-1 rounded-xl p-3">
+              {/* Token + user footer */}
+              <div className="shrink-0 px-4 py-4 space-y-3" style={{ borderTop: "0.5px solid rgba(255,255,255,0.07)" }}>
+                {/* Token row */}
+                <div
+                  className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                  style={{ background: "rgba(56,224,195,0.05)", border: "0.5px solid rgba(56,224,195,0.14)" }}
+                >
                   <div>
-                    <p className="text-xs font-semibold text-text-primary">
+                    <p className="text-xs font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>
                       {(profile?.study_tokens ?? 0).toLocaleString()} tokens
                     </p>
-                    <p className="text-[10px] text-text-muted mt-0.5">Available balance</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>Available balance</p>
                   </div>
                   <button
                     onClick={() => { setMobileDrawerOpen(false); setPaymentModalOpen(true); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg gradient-brand text-white text-xs font-semibold"
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150"
+                    style={{ background: "rgba(56,224,195,0.1)", border: "0.5px solid rgba(56,224,195,0.28)", color: "#38E0C3" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "rgba(56,224,195,0.18)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "rgba(56,224,195,0.1)"}
                   >
-                    Top Up
+                    Top up
                   </button>
                 </div>
 
                 {/* User row */}
-                <div className="flex items-center gap-3 px-2">
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                    style={{ background: "rgba(56,224,195,0.2)", border: "1px solid rgba(56,224,195,0.3)" }}
-                  >
-                    <span className="text-xs font-bold" style={{ color: "var(--brand-primary)" }}>{initials}</span>
-                  </div>
+                <div className="flex items-center gap-3 px-1">
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ background: "rgba(56,224,195,0.14)", color: "#38E0C3" }}>
+                      {initials}
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-text-primary truncate">
-                      {profile?.full_name ?? "Student"}
-                    </p>
-                    <p className="text-[10px] text-text-muted truncate">{user?.email}</p>
+                    <p className="text-xs font-medium truncate" style={{ color: "rgba(255,255,255,0.88)" }}>{profile?.full_name ?? "Student"}</p>
+                    <p className="text-[10px] truncate" style={{ color: "rgba(255,255,255,0.35)" }}>{user?.email}</p>
                   </div>
                   <button
                     onClick={handleSignOut}
-                    className="p-1.5 rounded-lg text-text-muted hover:text-brand-danger hover:bg-brand-danger/10 transition-colors"
+                    className="p-1.5 rounded-lg transition-all duration-150 shrink-0"
+                    style={{ color: "rgba(255,255,255,0.35)" }}
+                    onMouseEnter={e => { e.currentTarget.style.color = "rgba(239,68,68,0.8)"; e.currentTarget.style.background = "rgba(239,68,68,0.07)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = "rgba(255,255,255,0.35)"; e.currentTarget.style.background = "transparent"; }}
                   >
                     <LogOut className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
-            </motion.aside>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              </motion.aside>
+            </>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </>
   );
 }

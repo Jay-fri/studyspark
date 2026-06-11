@@ -16,6 +16,7 @@ import { NIGERIAN_UNIVERSITIES } from "@/types";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { supabase } from "@/services/supabase";
+import { WetPaintButton } from "@/components/ui/WetPaintButton";
 
 type Tab = "signin" | "signup" | "forgot" | "check-email";
 
@@ -177,14 +178,10 @@ function Divider() {
 
 function SubmitButton({ loading, label }: { loading: boolean; label: string }) {
   return (
-    <button
-      type="submit"
-      disabled={loading}
-      className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all duration-150 disabled:opacity-50"
-      style={{ background: "#38E0C3", color: "#0a1628" }}>
+    <WetPaintButton type="submit" disabled={loading} className="w-full justify-center">
       {loading && <Loader2 className="w-4 h-4 animate-spin" />}
       {label}
-    </button>
+    </WetPaintButton>
   );
 }
 
