@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { LayoutDashboard, BookMarked, Library, User, Plus } from "@/lib/icons";
+import { LayoutDashboard, BookMarked, Library, Plus, Coffee } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { useNotebookStore } from "@/stores/notebookStore";
 import { activeTour } from "@/hooks/useTour";
@@ -12,7 +12,7 @@ const TABS: Tab[] = [
   { to: "/notebooks",          icon: BookMarked,      label: "Notebooks", isFab: false, tourId: "tour-nav-notebooks" },
   { to: "/notebooks?create=1", icon: Plus,            label: "New",       isFab: true                               },
   { to: "/library",            icon: Library,         label: "Library",   isFab: false, tourId: "tour-nav-library"   },
-  { to: "/settings",           icon: User,            label: "Profile",   isFab: false, tourId: "tour-nav-profile"   },
+  { to: "/break",              icon: Coffee,          label: "Break",     isFab: false, tourId: "tour-break-room"    },
 ];
 
 export function MobileNav() {

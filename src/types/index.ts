@@ -7,11 +7,15 @@ export interface Profile {
   avatar_url: string | null;
   role: "student" | "admin";
   university: string | null;
+  username: string | null;
   study_tokens: number;
   total_tokens_used: number;
   is_suspended: boolean;
   is_banned: boolean;
   ban_reason: string | null;
+  chess_elo: number;
+  draughts_wins: number;
+  scrabble_high_score: number;
   created_at: string;
   updated_at: string;
 }

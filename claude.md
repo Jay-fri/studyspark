@@ -219,3 +219,17 @@ so it clears iPhone home bar
   padding-bottom: env(safe-area-inset-bottom)
 - Status bar color matches #0a1628 via theme-color meta tag
 - No fixed elements except bottom nav and shine line
+
+## Games
+
+- Chess uses `chess.js` (logic) + `react-chessboard` (UI); installed with `--legacy-peer-deps`
+- Chess board colors: dark squares `#1a3a4a`, light squares `#2d5a6e` (deep teal, premium feel)
+- Scrabble is custom-built — no library; 15×15 board, standard English tile distribution
+- Scrabble dictionary: `enable1.txt` fetched once from GitHub raw, cached in `sessionStorage` as a `Set` (O(1) lookups)
+- Scrabble tile color: `rgba(251,191,36,0.9)` amber/cream — intentional exception to mint-only accent rule
+- Both games save to Supabase (`chess_games`, `scrabble_games`) on every move/word
+- AI review costs 20 tokens; calls `proxy-groq` edge function with `jsonMode: true`; review stored in `ai_review` column
+- `useStreak` calls the `record_activity` Supabase RPC on every study/game action; atomic streak logic is in SQL
+- Streak badge uses orange `#F97316` — the ONE exception to mint-only accent (fire is orange)
+- Active games show on the Dashboard homepage; streak count appears in the greeting and summary line
+- Break Room nav: `id="tour-break-room"`, uses `Coffee` icon from `@/lib/icons`

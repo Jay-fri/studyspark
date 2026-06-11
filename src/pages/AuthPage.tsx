@@ -611,7 +611,9 @@ function SignUpForm({ onSwitch }: { onSwitch: (t: Tab) => void }) {
               colorScheme: "dark",
             }}>
             <option value="">Select your university</option>
-            {NIGERIAN_UNIVERSITIES.map((u) => (
+            {[...NIGERIAN_UNIVERSITIES]
+              .sort((a, b) => a === "Other" ? 1 : b === "Other" ? -1 : a.localeCompare(b))
+              .map((u) => (
               <option
                 key={u}
                 value={u}

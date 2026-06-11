@@ -9,6 +9,7 @@ import { supabase } from "@/services/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { useNotebookStore } from "@/stores/notebookStore";
 import { useUIStore } from "@/stores/uiStore";
+import { StreakBadge } from "@/components/games/StreakBadge";
 import type { AIOutput } from "@/types";
 import toast from "react-hot-toast";
 
@@ -100,6 +101,8 @@ export default function DashboardPage() {
   const { getDueCards } = useSRS();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  const userId = profile?.id;
+
   // Show a toast if redirected here from PaymentCallbackPage (e.g. 3DS card flow)
   useEffect(() => {
     const payment = searchParams.get("payment");
@@ -116,11 +119,61 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const userId = profile?.id;
   const balance = profile?.study_tokens ?? 0;
   const max = 1000;
   const firstName = profile?.full_name?.split(" ")[0] ?? "there";
   const today = format(new Date(), "EEEE, MMMM d");
+
+  const { data: streakData } = useQuery({
+    queryKey: ["streak", userId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("streaks")
+        .select("current_streak, longest_streak")
+        .eq("user_id", userId!)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!userId,
+    staleTime: 60_000,
+  });
+
+  const { data: activeChessGame } = useQuery({
+    queryKey: ["active-chess-dash", userId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("chess_games")
+        .select("id, moves_count")
+        .eq("user_id", userId!)
+        .eq("status", "active")
+        .or("game_type.eq.ai,game_type.is.null")
+        .gt("moves_count", 0)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!userId,
+  });
+
+  const { data: activeScrabbleGame } = useQuery({
+    queryKey: ["active-scrabble-dash", userId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("scrabble_games")
+        .select("id, score")
+        .eq("user_id", userId!)
+        .eq("status", "active")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!userId,
+    staleTime: 30_000,
+  });
+
+  const currentStreak = streakData?.current_streak ?? 0;
 
   const { data: recentOutputs = [] } = useQuery<AIOutput[]>({
     queryKey: ["recent-outputs", userId],
@@ -190,6 +243,10 @@ export default function DashboardPage() {
     );
   if (sourceCount)
     summaryParts.push(`${sourceCount} source${sourceCount !== 1 ? "s" : ""}`);
+  if (currentStreak > 0)
+    summaryParts.push(`🔥 ${currentStreak} day streak`);
+  else if (summaryParts.length > 0)
+    summaryParts.push("Start your streak today");
 
   return (
     <div className="relative px-5 sm:px-6 lg:px-8 py-6 max-w-5xl mx-auto">
@@ -201,11 +258,14 @@ export default function DashboardPage() {
             style={{ color: "var(--text-dim)" }}>
             {today}
           </p>
-          <h1
-            className="text-[30px] font-medium leading-tight mt-0.5"
-            style={{ color: "var(--text-primary)" }}>
-            {greeting(firstName)}
-          </h1>
+          <div className="flex items-center gap-2.5 mt-0.5 flex-wrap">
+            <h1
+              className="text-[30px] font-medium leading-tight"
+              style={{ color: "var(--text-primary)" }}>
+              {greeting(firstName)}
+            </h1>
+            <StreakBadge streak={currentStreak} />
+          </div>
         </motion.div>
 
         {/* ── Mobile summary meta ── */}
@@ -222,11 +282,14 @@ export default function DashboardPage() {
           <p className="text-xs" style={{ color: "var(--text-dim)" }}>
             {today}
           </p>
-          <h1
-            className="text-3xl sm:text-4xl font-medium mt-1 leading-tight"
-            style={{ color: "var(--text-primary)" }}>
-            {greeting(firstName)}
-          </h1>
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
+            <h1
+              className="text-3xl sm:text-4xl font-medium leading-tight"
+              style={{ color: "var(--text-primary)" }}>
+              {greeting(firstName)}
+            </h1>
+            <StreakBadge streak={currentStreak} />
+          </div>
           {summaryParts.length > 0 && (
             <p className="text-sm mt-2" style={{ color: "var(--text-muted)" }}>
               {summaryParts.join(" · ")}
@@ -366,6 +429,78 @@ export default function DashboardPage() {
             </button>
           </div>
         </motion.div>
+
+        {/* ── Active Games card ── */}
+        {(activeChessGame || activeScrabbleGame) && (
+          <motion.div variants={fadeUp} className="mb-3">
+            <div
+              className="rounded-xl px-4 py-3"
+              style={{
+                background: "var(--surface-1)",
+                border: "0.5px solid var(--border)",
+              }}>
+              <p
+                className="text-[10px] font-semibold uppercase tracking-widest mb-2.5"
+                style={{ color: "var(--text-dim)" }}>
+                Active Games
+              </p>
+              <div className="flex gap-2.5 flex-wrap">
+                {activeChessGame && (
+                  <Link
+                    to={`/break/chess/${activeChessGame.id}`}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all"
+                    style={{
+                      background: "rgba(255,255,255,0.04)",
+                      border: "0.5px solid rgba(255,255,255,0.09)",
+                    }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.borderColor = "rgba(56,224,195,0.2)")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.borderColor = "rgba(255,255,255,0.09)")
+                    }>
+                    <span className="text-base">♟</span>
+                    <div>
+                      <p className="text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
+                        Chess
+                      </p>
+                      <p className="text-[10px]" style={{ color: "var(--text-dim)" }}>
+                        {activeChessGame.moves_count ?? 0} moves
+                      </p>
+                    </div>
+                    <span className="text-[10px] ml-1" style={{ color: "var(--text-dim)" }}>→</span>
+                  </Link>
+                )}
+                {activeScrabbleGame && (
+                  <Link
+                    to={`/break/scrabble/${activeScrabbleGame.id}`}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all"
+                    style={{
+                      background: "rgba(255,255,255,0.04)",
+                      border: "0.5px solid rgba(255,255,255,0.09)",
+                    }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.borderColor = "rgba(56,224,195,0.2)")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.borderColor = "rgba(255,255,255,0.09)")
+                    }>
+                    <span className="text-base">🔤</span>
+                    <div>
+                      <p className="text-xs font-medium" style={{ color: "var(--text-secondary)" }}>
+                        Scrabble
+                      </p>
+                      <p className="text-[10px]" style={{ color: "var(--text-dim)" }}>
+                        {activeScrabbleGame.score ?? 0} pts
+                      </p>
+                    </div>
+                    <span className="text-[10px] ml-1" style={{ color: "var(--text-dim)" }}>→</span>
+                  </Link>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* ── Flashcard review nudge ── */}
         {totalDue > 0 && (

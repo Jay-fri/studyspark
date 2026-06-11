@@ -11,7 +11,7 @@ import {
   Zap, Search, Gift, BookOpen, ShieldCheck, ShieldOff, UserCog,
   PlusCircle, Loader2, AlertTriangle, Check, X,
   TrendingUp, TrendingDown, Trash2, ToggleLeft, ToggleRight, SlidersHorizontal,
-  MessageSquare,
+  MessageSquare, Trophy, Eye,
 } from "@/lib/icons";
 import toast from "react-hot-toast";
 import { supabase }      from "@/services/supabase";
@@ -227,6 +227,244 @@ function ViewNotebooksModal({ user, onClose }: { user: Profile; onClose: () => v
   );
 }
 
+type DetailTab = "games" | "ai" | "tokens";
+
+function UserDetailModal({ user, onClose }: { user: Profile; onClose: () => void }) {
+  const [tab, setTab] = useState<DetailTab>("games");
+
+  const { data: games, isLoading: gamesLoading } = useQuery({
+    queryKey: ["admin-user-games", user.id],
+    queryFn: async () => {
+      const [chess, draughts, scrabble] = await Promise.all([
+        supabase.from("chess_games").select("id, result, game_type, difficulty, bot_id, winner_id, game_over_reason, moves_count, updated_at").or(`user_id.eq.${user.id},player2_id.eq.${user.id}`).eq("status", "completed").order("updated_at", { ascending: false }).limit(20),
+        supabase.from("draughts_games" as any).select("id, result, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(10).maybeSingle().then(() => ({ data: null })), // graceful if table doesn't exist
+        supabase.from("scrabble_games").select("id, score, words_played, status, created_at").eq("user_id", user.id).eq("status", "completed").order("created_at", { ascending: false }).limit(10),
+      ]);
+      return { chess: chess.data ?? [], scrabble: scrabble.data ?? [] };
+    },
+  });
+
+  const { data: aiUsage, isLoading: aiLoading } = useQuery({
+    queryKey: ["admin-user-ai", user.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("ai_outputs").select("type, tokens_used, created_at").eq("user_id", user.id).order("created_at", { ascending: false });
+      const rows = data ?? [];
+      const byType = rows.reduce<Record<string, { count: number; tokens: number }>>((acc, r) => {
+        if (!acc[r.type]) acc[r.type] = { count: 0, tokens: 0 };
+        acc[r.type].count += 1;
+        acc[r.type].tokens += r.tokens_used ?? 0;
+        return acc;
+      }, {});
+      return { rows, byType };
+    },
+  });
+
+  const { data: tokenTx, isLoading: tokensLoading } = useQuery({
+    queryKey: ["admin-user-tokens", user.id],
+    queryFn: async () => {
+      const { data } = await supabase.from("token_transactions").select("type, amount, description, balance_after, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50);
+      return data ?? [];
+    },
+  });
+
+  const REASON_SHORT: Record<string, string> = { checkmate: "Checkmate", stalemate: "Stalemate", resignation: "Resigned", timeout: "Time", insufficient: "Insuff.", repetition: "Repetition", fifty_moves: "50-move" };
+
+  const tabs: { id: DetailTab; label: string }[] = [
+    { id: "games", label: "Games" },
+    { id: "ai", label: "AI Usage" },
+    { id: "tokens", label: "Token History" },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <motion.div
+        initial={{ scale: 0.96, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="relative bg-[var(--surface-0)] border border-[var(--border)] rounded-2xl w-full max-w-2xl shadow-2xl max-h-[82vh] flex flex-col"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)] shrink-0">
+          <div className="flex items-center gap-3">
+            {user.avatar_url ? (
+              <img src={user.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
+            ) : (
+              <div className="w-9 h-9 rounded-full gradient-brand flex items-center justify-center">
+                <span className="text-sm font-bold text-white">{(user.full_name ?? user.email)[0].toUpperCase()}</span>
+              </div>
+            )}
+            <div>
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">{user.full_name ?? user.email}</h3>
+              <p className="text-xs text-[var(--text-muted)]">{user.email} · {user.study_tokens.toLocaleString()} tokens</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-[var(--surface-2)] transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Sub-tabs */}
+        <div className="flex gap-1 px-4 pt-3 pb-0 shrink-0">
+          {tabs.map((t) => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                tab === t.id
+                  ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] border border-[var(--brand-primary)]/30"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-secondary)] border border-transparent"
+              )}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="overflow-y-auto flex-1 p-4">
+
+          {/* ── Games tab ── */}
+          {tab === "games" && (
+            <div className="space-y-4">
+              {/* Quick stats */}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "Chess ELO", value: user.chess_elo ?? 1000, color: "text-[var(--brand-primary)]" },
+                  { label: "Draughts Wins", value: user.draughts_wins ?? 0, color: "text-[#F59E0B]" },
+                  { label: "Scrabble Best", value: user.scrabble_high_score ?? 0, color: "text-[#6366F1]" },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="bg-[var(--surface-1)] border border-[var(--border)] rounded-xl p-3 text-center">
+                    <p className={cn("text-xl font-semibold", color)}>{value.toLocaleString()}</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{label}</p>
+                  </div>
+                ))}
+              </div>
+              {/* Chess game list */}
+              <div>
+                <p className="text-xs font-semibold text-[var(--text-muted)] mb-2 uppercase tracking-wide">Recent Chess ({games?.chess.length ?? 0})</p>
+                {gamesLoading && <Loader2 className="w-4 h-4 animate-spin text-[var(--text-muted)] mx-auto my-4" />}
+                {!gamesLoading && (games?.chess.length ?? 0) === 0 && <p className="text-xs text-[var(--text-muted)] text-center py-4">No games yet</p>}
+                <div className="space-y-1">
+                  {games?.chess.map((g: any) => {
+                    const isMP = g.game_type === "multiplayer";
+                    const myResult: string = g.winner_id
+                      ? (g.winner_id === user.id ? "Win" : "Loss")
+                      : (g.result === "draw" ? "Draw" : isMP ? "—" : (g.result ? g.result.charAt(0).toUpperCase() + g.result.slice(1) : "—"));
+                    const resultColor = myResult === "Win" ? "text-green-400" : myResult === "Loss" ? "text-red-400" : "text-[var(--text-muted)]";
+                    return (
+                      <div key={g.id} className="flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--surface-1)] border border-[var(--border)] text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[var(--text-muted)]">{isMP ? "👥 vs Player" : `🤖 AI`}</span>
+                          {g.game_over_reason && <span className="text-[var(--text-muted)] opacity-60">{REASON_SHORT[g.game_over_reason] ?? g.game_over_reason}</span>}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-[var(--text-muted)]">{g.moves_count ?? 0}m</span>
+                          <span className={cn("font-semibold w-8 text-right", resultColor)}>{myResult}</span>
+                          <span className="text-[var(--text-muted)] opacity-50">{g.updated_at ? format(new Date(g.updated_at), "MMM d") : ""}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* Scrabble */}
+              {(games?.scrabble.length ?? 0) > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-[var(--text-muted)] mb-2 uppercase tracking-wide">Recent Scrabble</p>
+                  <div className="space-y-1">
+                    {games?.scrabble.map((g: any) => (
+                      <div key={g.id} className="flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--surface-1)] border border-[var(--border)] text-xs">
+                        <span className="text-[var(--text-muted)]">🔤 Scrabble · {g.words_played ?? 0} words</span>
+                        <div className="flex items-center gap-3">
+                          <span className="font-semibold text-[#6366F1]">{(g.score ?? 0).toLocaleString()} pts</span>
+                          <span className="text-[var(--text-muted)] opacity-50">{format(new Date(g.created_at), "MMM d")}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── AI Usage tab ── */}
+          {tab === "ai" && (
+            <div className="space-y-4">
+              {aiLoading && <Loader2 className="w-4 h-4 animate-spin text-[var(--text-muted)] mx-auto my-8" />}
+              {!aiLoading && (
+                <>
+                  {/* By type summary */}
+                  <div>
+                    <p className="text-xs font-semibold text-[var(--text-muted)] mb-2 uppercase tracking-wide">Usage by Feature</p>
+                    {Object.keys(aiUsage?.byType ?? {}).length === 0 && (
+                      <p className="text-xs text-[var(--text-muted)] text-center py-4">No AI features used yet</p>
+                    )}
+                    <div className="space-y-1.5">
+                      {Object.entries(aiUsage?.byType ?? {}).sort((a, b) => b[1].count - a[1].count).map(([type, { count, tokens }]) => (
+                        <div key={type} className="flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--surface-1)] border border-[var(--border)] text-xs">
+                          <span className="text-[var(--text-secondary)] font-medium">{TYPE_LABELS[type] ?? type}</span>
+                          <div className="flex items-center gap-4 text-[var(--text-muted)]">
+                            <span>{count}×</span>
+                            <span>{tokens.toLocaleString()} tokens</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Recent calls */}
+                  <div>
+                    <p className="text-xs font-semibold text-[var(--text-muted)] mb-2 uppercase tracking-wide">Recent Calls ({aiUsage?.rows.length ?? 0})</p>
+                    <div className="space-y-1">
+                      {aiUsage?.rows.slice(0, 15).map((r: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between px-3 py-2 rounded-xl bg-[var(--surface-1)] border border-[var(--border)] text-xs">
+                          <span className="text-[var(--text-secondary)]">{TYPE_LABELS[r.type] ?? r.type}</span>
+                          <div className="flex items-center gap-3 text-[var(--text-muted)]">
+                            <span>{r.tokens_used ?? 0} tokens</span>
+                            <span className="opacity-50">{format(new Date(r.created_at), "MMM d, HH:mm")}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ── Token History tab ── */}
+          {tab === "tokens" && (
+            <div>
+              {tokensLoading && <Loader2 className="w-4 h-4 animate-spin text-[var(--text-muted)] mx-auto my-8" />}
+              {!tokensLoading && (tokenTx?.length ?? 0) === 0 && (
+                <p className="text-xs text-[var(--text-muted)] text-center py-8">No token transactions</p>
+              )}
+              <div className="space-y-1">
+                {tokenTx?.map((tx: any) => {
+                  const isCredit = tx.amount > 0;
+                  return (
+                    <div key={tx.id ?? tx.created_at} className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-[var(--surface-1)] border border-[var(--border)] text-xs">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[var(--text-secondary)] font-medium truncate">{tx.description || tx.type}</p>
+                        <p className="text-[var(--text-muted)] opacity-60 mt-0.5">{format(new Date(tx.created_at), "MMM d, yyyy HH:mm")}</p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0 ml-3">
+                        {tx.balance_after !== null && tx.balance_after !== undefined && (
+                          <span className="text-[var(--text-muted)] opacity-50">{tx.balance_after.toLocaleString()} bal</span>
+                        )}
+                        <span className={cn("font-semibold w-16 text-right", isCredit ? "text-green-400" : "text-red-400")}>
+                          {isCredit ? "+" : ""}{tx.amount.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 function BanModal({ user, onClose }: { user: Profile; onClose: () => void }) {
   const [reason, setReason] = useState("");
   const qc = useQueryClient();
@@ -270,9 +508,10 @@ function UsersTab() {
   const qc = useQueryClient();
   const [search, setSearch]       = useState("");
   const [filter, setFilter]       = useState<UserFilter>("all");
-  const [grantUser, setGrantUser] = useState<Profile | null>(null);
-  const [nbUser, setNbUser]       = useState<Profile | null>(null);
-  const [banUser, setBanUser]     = useState<Profile | null>(null);
+  const [grantUser, setGrantUser]   = useState<Profile | null>(null);
+  const [nbUser, setNbUser]         = useState<Profile | null>(null);
+  const [banUser, setBanUser]       = useState<Profile | null>(null);
+  const [detailUser, setDetailUser] = useState<Profile | null>(null);
 
   const weekAgoISO = subDays(new Date(), 7).toISOString();
 
@@ -439,6 +678,9 @@ function UsersTab() {
                       <button title="View notebooks" onClick={() => setNbUser(p)} className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[#6366F1] hover:bg-[#6366F1]/10 transition-colors">
                         <BookOpen className="w-3.5 h-3.5" />
                       </button>
+                      <button title="View activity details" onClick={() => setDetailUser(p)} className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[#10B981] hover:bg-[#10B981]/10 transition-colors">
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
                       <button title={`Make ${p.role === "admin" ? "student" : "admin"}`} onClick={() => toggleRole(p)} className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[#F59E0B] hover:bg-[#F59E0B]/10 transition-colors">
                         <UserCog className="w-3.5 h-3.5" />
                       </button>
@@ -463,9 +705,10 @@ function UsersTab() {
         </div>
       </div>
 
-      {grantUser && <GrantTokensModal user={grantUser} onClose={() => setGrantUser(null)} />}
-      {nbUser    && <ViewNotebooksModal user={nbUser}   onClose={() => setNbUser(null)} />}
-      {banUser   && <BanModal user={banUser} onClose={() => setBanUser(null)} />}
+      {grantUser   && <GrantTokensModal  user={grantUser}   onClose={() => setGrantUser(null)} />}
+      {nbUser      && <ViewNotebooksModal user={nbUser}     onClose={() => setNbUser(null)} />}
+      {banUser     && <BanModal           user={banUser}    onClose={() => setBanUser(null)} />}
+      {detailUser  && <UserDetailModal    user={detailUser} onClose={() => setDetailUser(null)} />}
     </div>
   );
 }
@@ -1296,6 +1539,37 @@ function FeedbackTab() {
 export default function AdminPage() {
   const [tab, setTab] = useState<AdminTab>("overview");
 
+  const { data: feedbackUnread = 0 } = useQuery({
+    queryKey: ["admin-feedback-unread"],
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { count } = await (supabase.from("user_feedback") as any)
+        .select("*", { count: "exact", head: true })
+        .eq("status", "open");
+      return count ?? 0;
+    },
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+
+  const { data: appealsUnread = 0 } = useQuery({
+    queryKey: ["admin-appeals-unread"],
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { count } = await (supabase.from("ban_appeals") as any)
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pending");
+      return count ?? 0;
+    },
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+
+  const tabBadges: Partial<Record<AdminTab, number>> = {
+    feedback:     feedbackUnread,
+    "ban-appeals": appealsUnread,
+  };
+
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -1312,21 +1586,35 @@ export default function AdminPage() {
 
       {/* Tab nav */}
       <div className="flex gap-1 overflow-x-auto scrollbar-none mb-6 border-b border-[var(--border)] pb-0">
-        {TABS.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors shrink-0",
-              tab === id
-                ? "border-[var(--brand-primary)] text-[var(--brand-primary)]"
-                : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
-            )}
-          >
-            <Icon className="w-4 h-4" />
-            {label}
-          </button>
-        ))}
+        {TABS.map(({ id, label, icon: Icon }) => {
+          const badge = tabBadges[id] ?? 0;
+          return (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors shrink-0",
+                tab === id
+                  ? "border-[var(--brand-primary)] text-[var(--brand-primary)]"
+                  : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+              )}
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+              {badge > 0 && (
+                <span
+                  className="min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold px-1"
+                  style={{
+                    background: tab === id ? "rgba(56,224,195,0.2)" : "rgba(56,224,195,0.15)",
+                    color: "#38E0C3",
+                  }}
+                >
+                  {badge > 99 ? "99+" : badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Tab content */}

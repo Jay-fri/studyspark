@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  LayoutDashboard, BookMarked, Library, Settings, Shield, LogOut, PanelLeftClose, PanelLeftOpen, Dna, MessageSquare,
+  LayoutDashboard, BookMarked, Library, Settings, Shield, LogOut, PanelLeftClose, PanelLeftOpen, Dna, MessageSquare, Coffee,
 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/uiStore";
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { to: "/notebooks", icon: BookMarked,       label: "Notebooks",  tourId: "tour-sidebar-notebooks" },
   { to: "/library",   icon: Library,          label: "Library",    tourId: "tour-sidebar-library"   },
   { to: "/anatomy",   icon: Dna,              label: "Anatomy 3D", tourId: "tour-sidebar-anatomy"   },
+  { to: "/break",     icon: Coffee,           label: "Break Room", tourId: "tour-break-room"        },
   { to: "/feedback",  icon: MessageSquare,    label: "Feedback",   tourId: "tour-sidebar-feedback"  },
   { to: "/settings",  icon: Settings,         label: "Settings",   tourId: "tour-sidebar-settings"  },
 ] as const;

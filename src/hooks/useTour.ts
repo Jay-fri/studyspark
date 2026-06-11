@@ -350,6 +350,19 @@ export function useTour() {
           onHighlightStarted: skipIfHidden(library),
         },
 
+        // ── 4b. Break Room nav ───────────────────────────────────────────────
+        {
+          element: "#tour-break-room",
+          popover: {
+            title: "Break Room 🎮",
+            description:
+              "Need a breather? Play Chess or Scrabble. Your games save automatically so you can pick up any time. Use 20 tokens for an AI review of your game.",
+            side: isMobile ? "top" : "right",
+            align: "start",
+          },
+          onHighlightStarted: skipIfHidden("#tour-break-room"),
+        },
+
         // ── 5. Profile & Settings nav ────────────────────────────────────────
         {
           element: profile,

@@ -1,10 +1,12 @@
 import { useEffect, useRef } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTour } from "@/hooks/useTour";
 import { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { useTheme } from "@/hooks/useTheme";
 import { useNotebooks } from "@/hooks/useNotebook";
 import { useAuthStore } from "@/stores/authStore";
+import { supabase } from "@/services/supabase";
 import { Sidebar } from "./Sidebar";
 import { Navbar } from "./Navbar";
 import { MobileNav } from "./MobileNav";
@@ -13,6 +15,233 @@ import { PWAPrompt } from "./PWAPrompt";
 import { TokenBanner } from "@/components/payment/TokenBanner";
 import { PaymentModal } from "@/components/payment/PaymentModal";
 import { CommandPalette } from "@/components/ui/CommandPalette";
+
+// ─── Global real-time notifications (challenges + friend requests) ─────────────
+
+function GlobalNotifications() {
+  const profile = useAuthStore((s) => s.profile);
+  const navigate = useNavigate();
+
+  // Helper: show chess challenge toast (used for new + missed challenges on reload)
+  const showChessChallengToast = (game: any, challenger: { username: string | null; full_name: string | null } | null) => {
+    const name = challenger?.username ? `@${challenger.username}` : challenger?.full_name ?? "Someone";
+    const myColor = game.player1_color === "white" ? "Black" : "White";
+    const timeLabel = game.time_control === "unlimited" ? "No timer" : game.time_control;
+    toast(
+      (t) => (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.9)" }}>
+            ♟ {name} challenged you!
+          </p>
+          <p className="text-xs" style={{ color: "rgba(255,255,255,0.38)" }}>
+            You play {myColor} · {timeLabel}
+          </p>
+          <div className="flex gap-2 mt-0.5">
+            <button
+              onClick={async () => {
+                toast.dismiss(t.id);
+                await supabase.from("chess_games").update({ status: "active" }).eq("id", game.id);
+                navigate(`/break/chess/mp/${game.id}`);
+              }}
+              className="flex-1 py-1.5 rounded-lg text-xs font-medium"
+              style={{ background: "rgba(56,224,195,0.15)", border: "0.5px solid rgba(56,224,195,0.3)", color: "#38E0C3" }}
+            >
+              Accept
+            </button>
+            <button
+              onClick={async () => {
+                toast.dismiss(t.id);
+                await supabase.from("chess_games").update({ status: "declined" }).eq("id", game.id);
+              }}
+              className="flex-1 py-1.5 rounded-lg text-xs"
+              style={{ background: "rgba(239,68,68,0.08)", border: "0.5px solid rgba(239,68,68,0.15)", color: "rgba(239,68,68,0.65)" }}
+            >
+              Decline
+            </button>
+          </div>
+        </div>
+      ),
+      {
+        duration: 60000,
+        style: { background: "rgba(17,29,48,0.98)", border: "0.5px solid rgba(56,224,195,0.22)", borderRadius: "14px", padding: "14px 16px" },
+      },
+    );
+  };
+
+  // Helper: show TTT invite toast
+  const showTttInviteToast = (game: any, challenger: { username: string | null; full_name: string | null } | null) => {
+    const name = challenger?.username ? `@${challenger.username}` : challenger?.full_name ?? "Someone";
+    toast(
+      (t) => (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.9)" }}>
+            ✕○ {name} challenged you to Tic-tac-toe!
+          </p>
+          <div className="flex gap-2 mt-0.5">
+            <button
+              onClick={async () => {
+                toast.dismiss(t.id);
+                await supabase.from("ttt_games").update({ status: "active" }).eq("id", game.id);
+                navigate(`/break/ttt/${game.id}`);
+              }}
+              className="flex-1 py-1.5 rounded-lg text-xs font-medium"
+              style={{ background: "rgba(56,224,195,0.15)", border: "0.5px solid rgba(56,224,195,0.3)", color: "#38E0C3" }}
+            >
+              Accept
+            </button>
+            <button
+              onClick={async () => {
+                toast.dismiss(t.id);
+                await supabase.from("ttt_games").update({ status: "declined" }).eq("id", game.id);
+              }}
+              className="flex-1 py-1.5 rounded-lg text-xs"
+              style={{ background: "rgba(239,68,68,0.08)", border: "0.5px solid rgba(239,68,68,0.15)", color: "rgba(239,68,68,0.65)" }}
+            >
+              Decline
+            </button>
+          </div>
+        </div>
+      ),
+      {
+        duration: 60000,
+        style: { background: "rgba(17,29,48,0.98)", border: "0.5px solid rgba(255,255,255,0.12)", borderRadius: "14px", padding: "14px 16px" },
+      },
+    );
+  };
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    const userId = profile.id;
+
+    // On mount: fetch any pending challenges that arrived while offline/page was closed
+    (async () => {
+      const [{ data: pendingChess }, { data: pendingTtt }] = await Promise.all([
+        supabase
+          .from("chess_games")
+          .select("id, user_id, player1_color, time_control, profiles!chess_games_user_id_fkey(username, full_name)")
+          .eq("player2_id", userId)
+          .eq("status", "waiting")
+          .eq("game_type", "multiplayer"),
+        supabase
+          .from("ttt_games")
+          .select("id, player_x_id, profiles!ttt_games_player_x_id_fkey(username, full_name)")
+          .eq("player_o_id", userId)
+          .eq("status", "waiting"),
+      ]);
+
+      (pendingChess ?? []).forEach((g: any) => {
+        showChessChallengToast(g, g.profiles ?? null);
+      });
+      (pendingTtt ?? []).forEach((g: any) => {
+        showTttInviteToast(g, g.profiles ?? null);
+      });
+    })();
+
+    // Chess challenge toasts (new, live)
+    const challengeCh = supabase
+      .channel(`global-challenge-${userId}`)
+      .on(
+        "postgres_changes" as any,
+        { event: "INSERT", schema: "public", table: "chess_games", filter: `player2_id=eq.${userId}` },
+        async (payload: any) => {
+          const game = payload.new;
+          if (game.status !== "waiting") return;
+          const { data: challenger } = await supabase
+            .from("profiles")
+            .select("username, full_name")
+            .eq("id", game.user_id)
+            .maybeSingle();
+          showChessChallengToast(game, challenger ?? null);
+        },
+      )
+      .subscribe();
+
+    // TTT invite toasts (new, live)
+    const tttCh = supabase
+      .channel(`global-ttt-${userId}`)
+      .on(
+        "postgres_changes" as any,
+        { event: "INSERT", schema: "public", table: "ttt_games", filter: `player_o_id=eq.${userId}` },
+        async (payload: any) => {
+          const game = payload.new;
+          if (game.status !== "waiting") return;
+          const { data: challenger } = await supabase
+            .from("profiles")
+            .select("username, full_name")
+            .eq("id", game.player_x_id)
+            .maybeSingle();
+          showTttInviteToast(game, challenger ?? null);
+        },
+      )
+      .subscribe();
+
+    // Friend request toasts
+    const friendCh = supabase
+      .channel(`global-friends-${userId}`)
+      .on(
+        "postgres_changes" as any,
+        { event: "INSERT", schema: "public", table: "friendships", filter: `addressee_id=eq.${userId}` },
+        async (payload: any) => {
+          const fr = payload.new;
+          if (fr.status !== "pending") return;
+
+          const { data: requester } = await supabase
+            .from("profiles")
+            .select("username, full_name")
+            .eq("id", fr.requester_id)
+            .maybeSingle();
+
+          const name = requester?.username ? `@${requester.username}` : requester?.full_name ?? "Someone";
+
+          toast(
+            (t) => (
+              <div className="flex flex-col gap-2">
+                <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.9)" }}>
+                  👋 {name} wants to be friends
+                </p>
+                <div className="flex gap-2 mt-0.5">
+                  <button
+                    onClick={async () => {
+                      toast.dismiss(t.id);
+                      await supabase.from("friendships").update({ status: "accepted" }).eq("id", fr.id);
+                      toast.success(`You're now friends with ${name}!`);
+                    }}
+                    className="flex-1 py-1.5 rounded-lg text-xs font-medium"
+                    style={{ background: "rgba(56,224,195,0.15)", border: "0.5px solid rgba(56,224,195,0.3)", color: "#38E0C3" }}
+                  >
+                    Accept
+                  </button>
+                  <button
+                    onClick={async () => {
+                      toast.dismiss(t.id);
+                      await supabase.from("friendships").update({ status: "rejected" }).eq("id", fr.id);
+                    }}
+                    className="flex-1 py-1.5 rounded-lg text-xs"
+                    style={{ background: "rgba(255,255,255,0.05)", border: "0.5px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }}
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ),
+            {
+              duration: 60000,
+              style: { background: "rgba(17,29,48,0.98)", border: "0.5px solid rgba(255,255,255,0.12)", borderRadius: "14px", padding: "14px 16px" },
+            },
+          );
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(challengeCh);
+      supabase.removeChannel(tttCh);
+      supabase.removeChannel(friendCh);
+    };
+  }, [profile?.id, navigate]);
+
+  return null;
+}
 
 export function AppShell() {
   useTheme();
@@ -167,6 +396,7 @@ export function AppShell() {
       {!isNotebookView && <MobileNav />}
 
       {/* Global overlays */}
+      <GlobalNotifications />
       <CommandPalette />
       <PaymentModal />
       <PWAPrompt />

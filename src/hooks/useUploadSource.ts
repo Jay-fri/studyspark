@@ -1,7 +1,8 @@
 import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import { supabase } from "@/services/supabase";
-import { extractTextFromFile, countWords } from "@/services/fileParser";
+import { extractTextFromFile, countWords, friendlyUploadError } from "@/services/fileParser";
 import { useAuthStore } from "@/stores/authStore";
 import { useNotebookStore } from "@/stores/notebookStore";
 import type { Source } from "@/types";
@@ -45,7 +46,10 @@ export function useUploadSource(notebookId: string) {
 
     try {
       // ── 1. Extract text client-side ──────────────────────────────────────
-      const text = await extractTextFromFile(file);
+      const { text, truncated } = await extractTextFromFile(file);
+      if (truncated) {
+        toast("Large document — only the first ~120,000 words were processed.", { icon: "⚠️", duration: 5000 });
+      }
 
       setProgress({ filename: file.name, stage: "uploading", percent: 30 });
 
@@ -129,7 +133,7 @@ export function useUploadSource(notebookId: string) {
       setProgress({ filename: file.name, stage: "done", percent: 100 });
       return { ...source, processing_status: "ready" };
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Upload failed";
+      const msg = friendlyUploadError(err);
       setProgress({ filename: file.name, stage: "error", percent: 0, error: msg });
       return null;
     }
@@ -179,7 +183,7 @@ export function useUploadSource(notebookId: string) {
       setProgress({ filename: title, stage: "done", percent: 100 });
       return { ...source, processing_status: "ready" };
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Save failed";
+      const msg = friendlyUploadError(err);
       setProgress({ filename: title, stage: "error", percent: 0, error: msg });
       return null;
     }

@@ -28,6 +28,12 @@ const StudyModePage     = lazy(() => import("@/pages/StudyModePage"));
 const AdminPage         = lazy(() => import("@/pages/AdminPage"));
 const AnatomyPage       = lazy(() => import("@/pages/AnatomyPage"));
 const FeedbackPage      = lazy(() => import("@/pages/FeedbackPage"));
+const BreakRoomPage     = lazy(() => import("@/pages/BreakRoomPage"));
+const ChessPage         = lazy(() => import("@/pages/ChessPage"));
+const ScrabblePage      = lazy(() => import("@/pages/ScrabblePage"));
+const ScrabbleMpPage    = lazy(() => import("@/pages/ScrabblePage").then((m) => ({ default: m.MultiplayerScrabbleGame })));
+const DraughtsPage      = lazy(() => import("@/pages/DraughtsPage"));
+const TicTacToePage     = lazy(() => import("@/pages/TicTacToePage"));
 const NotFoundPage           = lazy(() => import("@/pages/NotFoundPage"));
 const PaymentCallbackPage    = lazy(() => import("@/pages/PaymentCallbackPage"));
 const BannedPage             = lazy(() => import("@/pages/BannedPage"));
@@ -77,6 +83,17 @@ export default function App() {
                   <Route path="/feedback"          element={<FeedbackPage />} />
                   <Route path="/study/review"      element={<StudyReviewPage />} />
                   <Route path="/study/:notebookId" element={<StudyModePage />} />
+                  <Route path="/break"                    element={<BreakRoomPage />} />
+                  <Route path="/break/chess"              element={<ChessPage />} />
+                  <Route path="/break/chess/:id"          element={<ChessPage />} />
+                  <Route path="/break/chess/mp/:id"       element={<ChessPage />} />
+                  <Route path="/break/scrabble"              element={<ScrabblePage />} />
+                  <Route path="/break/scrabble/mp/:id"    element={<ScrabbleMpPage />} />
+                  <Route path="/break/scrabble/:id"       element={<ScrabblePage />} />
+                  <Route path="/break/draughts"           element={<DraughtsPage />} />
+                  <Route path="/break/draughts/:id"       element={<DraughtsPage />} />
+                  <Route path="/break/ttt"                element={<TicTacToePage />} />
+                  <Route path="/break/ttt/:id"            element={<TicTacToePage />} />
                 </Route>
               </Route>
 

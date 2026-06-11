@@ -6,6 +6,15 @@ import { useUploadSource, type UploadProgress } from "@/hooks/useUploadSource";
 import { Portal } from "@/components/shared/Portal";
 import { cn } from "@/lib/utils";
 
+function getRejectionReason(errors: { code: string; message: string }[]): string {
+  for (const e of errors) {
+    if (e.code === "file-too-large")    return "File exceeds 25 MB. Try compressing or splitting it.";
+    if (e.code === "file-invalid-type") return "Unsupported type. Only PDF, DOCX, TXT, and MD are accepted.";
+    if (e.code === "too-many-files")    return "Too many files selected. Upload up to 5 at a time.";
+  }
+  return errors[0]?.message ?? "Invalid file.";
+}
+
 const ACCEPTED_TYPES: Record<string, string[]> = {
   "application/pdf": [".pdf"],
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
@@ -164,11 +173,15 @@ export function UploadModal({ notebookId, onClose, onDone }: Props) {
 
               {/* Rejection errors */}
               {fileRejections.length > 0 && (
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   {fileRejections.map(({ file, errors }) => (
-                    <p key={file.name} className="text-xs text-brand-danger">
-                      {file.name}: {errors[0]?.message}
-                    </p>
+                    <div key={file.name} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-brand-danger/10 border border-brand-danger/20">
+                      <AlertCircle className="w-3.5 h-3.5 text-brand-danger shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-brand-danger truncate">{file.name}</p>
+                        <p className="text-[11px] text-brand-danger/80">{getRejectionReason(errors)}</p>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
