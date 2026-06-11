@@ -42,3 +42,6 @@ public/pwa-*.png
 
 # TypeScript build info
 *.tsbuildinfo
+
+# Claude worktrees
+.claude/worktrees/
