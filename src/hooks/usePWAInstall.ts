@@ -1,8 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 
-const DISMISS_KEY = "studylm-pwa-dismissed-at";
-const DISMISS_TTL = 7 * 24 * 60 * 60 * 1000;
-
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
@@ -30,9 +27,6 @@ export function usePWAInstall() {
   useEffect(() => {
     if (platform.isStandalone) return;
 
-    const dismissedAt = parseInt(localStorage.getItem(DISMISS_KEY) ?? "0", 10);
-    if (Date.now() - dismissedAt < DISMISS_TTL) return;
-
     const show = () => setShowBanner(true);
 
     const handlePrompt = (e: Event) => {
@@ -40,18 +34,18 @@ export function usePWAInstall() {
       const evt = e as BeforeInstallPromptEvent;
       deferredPromptRef.current = evt;
       setDeferredPrompt(evt);
-      // Show banner as soon as the browser signals the app is installable
-      setTimeout(show, 1500);
+      // Show banner immediately when browser signals app is installable
+      show();
     };
 
     window.addEventListener("beforeinstallprompt", handlePrompt);
 
-    // iOS never fires beforeinstallprompt — show the manual instructions after a delay
-    const iosTimer = platform.isIOS ? setTimeout(show, 8_000) : null;
+    // For testing: show banner after short delay if not already installed
+    const timer = setTimeout(show, 2000);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handlePrompt);
-      if (iosTimer) clearTimeout(iosTimer);
+      clearTimeout(timer);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -67,7 +61,6 @@ export function usePWAInstall() {
   };
 
   const dismiss = () => {
-    localStorage.setItem(DISMISS_KEY, String(Date.now()));
     setShowBanner(false);
   };
 

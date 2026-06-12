@@ -18,9 +18,9 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: "auto",
-      // Use .json so Cloudflare Pages serves it as application/json (recognised by Chrome)
       manifestFilename: "manifest.json",
       includeAssets: ["apple-touch-icon.png", "logo.jpg", "pwa-192x192.png", "pwa-512x512.png"],
+      devOptions: { enabled: true },
       manifest: {
         id:               "/studylm",
         name:             "StudyLM — AI Study Assistant",
@@ -76,7 +76,6 @@ export default defineConfig({
           },
         ],
       },
-      devOptions: { enabled: false },
     }),
   ],
   resolve: {
