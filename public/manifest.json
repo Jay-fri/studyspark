@@ -1,9 +1,10 @@
 {
-  "id": "/studylm",
+  "id": "/",
   "name": "StudyLM — AI Study Assistant",
   "short_name": "StudyLM",
   "description": "AI-powered study assistant for university students. Upload notes, chat with AI, generate flashcards and quizzes.",
-  "start_url": "/dashboard",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0a1628",
   "theme_color": "#0a1628",
@@ -26,11 +27,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    },
-    {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png"
     }
   ]
 }

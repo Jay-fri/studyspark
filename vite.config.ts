@@ -20,9 +20,8 @@ export default defineConfig({
       injectRegister: "auto",
       manifestFilename: "manifest.json",
       includeAssets: ["apple-touch-icon.png", "logo.jpg", "pwa-192x192.png", "pwa-512x512.png"],
-      devOptions: { enabled: true },
       manifest: {
-        id:               "/studylm",
+        id:               "/",
         name:             "StudyLM — AI Study Assistant",
         short_name:       "StudyLM",
         description:      "AI-powered study assistant for university students. Upload notes, chat with AI, generate flashcards and quizzes.",
@@ -32,7 +31,7 @@ export default defineConfig({
         display_override: ["standalone", "minimal-ui"],
         orientation:      "portrait",
         categories:       ["education", "productivity"],
-        start_url:        "/dashboard",
+        start_url:        "/",
         scope:            "/",
         icons: [
           { src: "pwa-192x192.png", sizes: "192x192", type: "image/png", purpose: "any"      },
