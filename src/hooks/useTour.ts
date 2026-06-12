@@ -80,6 +80,7 @@ export function useTour() {
       document.documentElement.style.overflow = savedHtmlOverflow;
       document.body.style.overflow = savedBodyOverflow;
       localStorage.setItem(TOUR_KEY, "true");
+      window.dispatchEvent(new CustomEvent("studylm-tour-complete"));
     };
 
     const skipIfHidden = (selector: string) => () => {

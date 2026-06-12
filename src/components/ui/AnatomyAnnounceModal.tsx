@@ -1,12 +1,30 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-const SEEN_KEY = "studylm-anatomy-announce-v1";
+const SEEN_KEY      = "studylm-anatomy-announce-v1";
+const TOUR_KEY      = "studyai_tour_complete";
 
 export function AnatomyAnnounceModal() {
-  const [open, setOpen] = useState(() => !localStorage.getItem(SEEN_KEY));
+  // Only auto-open immediately if the user has already completed the tour.
+  // New users (tour pending) will see it after the tour finishes instead.
+  const [open, setOpen] = useState(() => {
+    if (localStorage.getItem(SEEN_KEY)) return false;
+    return !!localStorage.getItem(TOUR_KEY);
+  });
   const navigate = useNavigate();
+
+  // For new users: listen for the tour-complete event, then open after a short pause
+  useEffect(() => {
+    if (open || localStorage.getItem(SEEN_KEY)) return;
+    const handler = () => {
+      setTimeout(() => {
+        if (!localStorage.getItem(SEEN_KEY)) setOpen(true);
+      }, 600);
+    };
+    window.addEventListener("studylm-tour-complete", handler);
+    return () => window.removeEventListener("studylm-tour-complete", handler);
+  }, [open]);
 
   const dismiss = () => {
     localStorage.setItem(SEEN_KEY, "1");
