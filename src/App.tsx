@@ -2,7 +2,7 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { Loader2 } from "@/lib/icons";
+import { AppLoader } from "@/components/ui/AppLoader";
 import { queryClient } from "@/lib/queryClient";
 import { AppShell } from "@/components/layout/AppShell";
 import { AuthGuard } from "@/components/auth/AuthGuard";
@@ -40,8 +40,11 @@ const BannedPage             = lazy(() => import("@/pages/BannedPage"));
 
 function PageLoader() {
   return (
-    <div className="flex-1 flex items-center justify-center min-h-dvh">
-      <Loader2 className="w-6 h-6 text-brand-primary animate-spin" />
+    <div
+      style={{ background: "#0a1628" }}
+      className="flex-1 flex items-center justify-center min-h-dvh"
+    >
+      <AppLoader />
     </div>
   );
 }

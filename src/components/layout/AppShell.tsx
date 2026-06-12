@@ -15,6 +15,7 @@ import { PWAPrompt } from "./PWAPrompt";
 import { TokenBanner } from "@/components/payment/TokenBanner";
 import { PaymentModal } from "@/components/payment/PaymentModal";
 import { CommandPalette } from "@/components/ui/CommandPalette";
+import { AnatomyAnnounceModal } from "@/components/ui/AnatomyAnnounceModal";
 
 // ─── Global real-time notifications (challenges + friend requests) ─────────────
 
@@ -397,6 +398,7 @@ export function AppShell() {
 
       {/* Global overlays */}
       <GlobalNotifications />
+      <AnatomyAnnounceModal />
       <CommandPalette />
       <PaymentModal />
       <PWAPrompt />

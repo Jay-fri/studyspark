@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { Loader2 } from "@/lib/icons";
+import { AppLoaderPage } from "@/components/ui/AppLoader";
 import { useAuthStore } from "@/stores/authStore";
 
 const LAST_PATH_KEY = "studylm-last-path";
@@ -23,19 +23,17 @@ export function AuthGuard({ adminOnly = false }: AuthGuardProps) {
   const { user, isLoading, isAdmin } = useAuthStore();
   const location = useLocation();
 
-  // Persist the last visited protected path so we can restore it on return
   useEffect(() => {
     if (user && !isLoading) {
       saveLastPath(location.pathname);
     }
   }, [location.pathname, user, isLoading]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-dvh flex items-center justify-center bg-surface-0">
-        <Loader2 className="w-6 h-6 text-brand-primary animate-spin" />
-      </div>
-    );
+  // Show spinner only when loading AND no cached user yet
+  // (persisted user is available immediately from localStorage, so this
+  //  only fires on true first-load or after sign-out)
+  if (isLoading && !user) {
+    return <AppLoaderPage />;
   }
 
   if (!user) {

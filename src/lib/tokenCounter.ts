@@ -1,12 +1,13 @@
 export const DEFAULT_TOKEN_COSTS = {
-  summary:     35,
-  quiz:        40,
-  flashcards:  35,
-  mindmap:     50,
-  studyguide:  60,
-  keyconcepts: 25,
-  podcast:     65,
-  chat:         8,
+  summary:       35,
+  quiz:          40,
+  flashcards:    35,
+  mindmap:       50,
+  studyguide:    60,
+  keyconcepts:   25,
+  podcast:       65,
+  chat:           8,
+  anatomy_chat: 100,
 } as const;
 
 // Alias kept so import sites compile without changes (live values come from useTokenCosts)

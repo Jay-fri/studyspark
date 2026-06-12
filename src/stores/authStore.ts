@@ -3,6 +3,15 @@ import { persist } from "zustand/middleware";
 import type { User, Session } from "@supabase/supabase-js";
 import type { Profile } from "@/types";
 
+// Read cached session synchronously — prevents loading spinner on every tab return
+const _hasCachedUser = (() => {
+  try {
+    return !!JSON.parse(localStorage.getItem("studylm-auth") ?? "{}").state?.user;
+  } catch {
+    return false;
+  }
+})();
+
 interface AuthState {
   user:       User    | null;
   profile:    Profile | null;
@@ -24,7 +33,7 @@ export const useAuthStore = create<AuthState>()(
       user:      null,
       profile:   null,
       session:   null,
-      isLoading: true,
+      isLoading: !_hasCachedUser,
       isAdmin:   false,
 
       setUser:    (user)    => set({ user }),

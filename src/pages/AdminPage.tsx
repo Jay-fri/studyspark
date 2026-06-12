@@ -1177,7 +1177,8 @@ const COST_FIELDS: { key: string; label: string; desc: string }[] = [
   { key: "studyguide",  label: "Study Guide",  desc: "Comprehensive study guide" },
   { key: "keyconcepts", label: "Key Concepts", desc: "Key concept extraction" },
   { key: "podcast",     label: "Podcast",      desc: "Podcast-style script" },
-  { key: "chat",        label: "Chat (per msg)", desc: "Each AI chat message" },
+  { key: "chat",         label: "Chat (per msg)",       desc: "Each AI chat message" },
+  { key: "anatomy_chat", label: "3D Anatomy AI (per msg)", desc: "AI chat in the 3D Anatomy Explorer" },
 ];
 
 function TokenCostsTab() {

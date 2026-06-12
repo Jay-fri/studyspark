@@ -4,6 +4,15 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  server: {
+    proxy: {
+      '/r2-models': {
+        target: 'https://pub-b501ce6fd8de4bf4938674fb9e008ad0.r2.dev',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/r2-models/, ''),
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({
@@ -74,12 +83,17 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // Ensure only one copy of React and Three.js ends up in the bundle.
+    // R3F v9 accesses React internals via the same module instance —
+    // a duplicate copy causes "Cannot read properties of undefined (reading 'S')".
+    dedupe: ["react", "react-dom", "react/jsx-runtime", "three"],
   },
   build: {
     rollupOptions: {
       output: {
         manualChunks: {
-          react:     ["react", "react-dom"],
+          // Keep React + R3F in the same chunk so they share one React instance
+          react:     ["react", "react-dom", "@react-three/fiber", "@react-three/drei", "three", "@react-spring/three", "@use-gesture/react"],
           router:    ["react-router-dom"],
           motion:    ["framer-motion"],
           query:     ["@tanstack/react-query"],
