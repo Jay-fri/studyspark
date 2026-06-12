@@ -1422,10 +1422,7 @@ function FeedbackTab() {
           .select("id, full_name, username, email")
           .in("id", userIds as string[]);
         nameMap = Object.fromEntries(
-          (profiles ?? []).map((p: any) => [
-            p.id,
-            p.username ? `@${p.username}` : p.full_name ?? p.email ?? "Unknown",
-          ])
+          (profiles ?? []).map((p: any) => [p.id, p.full_name ?? p.email ?? "Unknown"])
         );
       }
 
