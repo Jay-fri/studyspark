@@ -1419,10 +1419,13 @@ function FeedbackTab() {
       if (userIds.length) {
         const { data: profiles } = await supabase
           .from("profiles")
-          .select("id, full_name, email")
+          .select("id, full_name, username, email")
           .in("id", userIds as string[]);
         nameMap = Object.fromEntries(
-          (profiles ?? []).map((p: any) => [p.id, p.full_name ?? p.email ?? p.id])
+          (profiles ?? []).map((p: any) => [
+            p.id,
+            p.username ? `@${p.username}` : p.full_name ?? p.email ?? "Unknown",
+          ])
         );
       }
 
@@ -1482,7 +1485,7 @@ function FeedbackTab() {
             message: string;
             status: string;
             created_at: string;
-            profiles?: { full_name?: string };
+            display_name: string;
           }) => {
             const st = STATUS_LABELS[row.status] ?? STATUS_LABELS.open;
             return (
@@ -1497,14 +1500,15 @@ function FeedbackTab() {
                     <span className="text-xs text-[var(--text-muted)]">
                       {CATEGORY_LABELS[row.category] ?? row.category}
                     </span>
+                    <span
+                      className="text-[11px] font-medium px-2 py-0.5 rounded-md"
+                      style={{ background: "rgba(56,224,195,0.08)", color: "rgba(56,224,195,0.8)", border: "0.5px solid rgba(56,224,195,0.15)" }}
+                    >
+                      {row.display_name}
+                    </span>
                     <span className="text-[10px] text-[var(--text-dim)]">
                       {format(new Date(row.created_at), "MMM d, yyyy")}
                     </span>
-                    {row.profiles?.full_name && (
-                      <span className="text-[10px] text-[var(--text-dim)]">
-                        — {row.profiles.full_name}
-                      </span>
-                    )}
                   </div>
                   {/* Status badge + picker */}
                   <select
