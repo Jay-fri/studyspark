@@ -12,22 +12,25 @@ Deno.serve(async (req) => {
   const VAPID_PUBLIC_KEY  = Deno.env.get("VAPID_PUBLIC_KEY");
   const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY");
   const SUPABASE_URL      = Deno.env.get("SUPABASE_URL");
+  const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
   const SERVICE_ROLE_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY || !SUPABASE_URL || !SERVICE_ROLE_KEY) {
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY || !SUPABASE_URL || !SUPABASE_ANON_KEY || !SERVICE_ROLE_KEY) {
     return json({ error: "Missing environment variables" }, 500);
   }
 
   webpush.setVapidDetails("mailto:hello@studylm.app", VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
-  // Verify caller is admin
-  const authHeader = req.headers.get("Authorization") ?? "";
-  const callerToken = authHeader.replace("Bearer ", "");
-  const callerClient = createClient(SUPABASE_URL, callerToken, {
+  // Verify caller is authenticated and has admin role
+  const jwt = (req.headers.get("Authorization") ?? "").replace("Bearer ", "").trim();
+  if (!jwt) return json({ error: "Unauthorized" }, 401);
+
+  const callerClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${jwt}` } },
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const { data: { user: caller } } = await callerClient.auth.getUser();
-  if (!caller) return json({ error: "Unauthorized" }, 401);
+  const { data: { user: caller }, error: authErr } = await callerClient.auth.getUser(jwt);
+  if (authErr || !caller) return json({ error: "Unauthorized" }, 401);
 
   const { data: callerProfile } = await callerClient
     .from("profiles")
@@ -39,7 +42,7 @@ Deno.serve(async (req) => {
   const { title, body, url = "/" } = await req.json();
   if (!title || !body) return json({ error: "title and body are required" }, 400);
 
-  // Fetch all subscriptions
+  // Fetch all subscriptions using service role (bypasses RLS)
   const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -68,7 +71,6 @@ Deno.serve(async (req) => {
     })
   );
 
-  // Remove expired/unsubscribed endpoints
   if (stale.length > 0) {
     await adminClient.from("push_subscriptions").delete().in("endpoint", stale);
   }
