@@ -11,7 +11,7 @@ import {
   Zap, Search, Gift, BookOpen, ShieldCheck, ShieldOff, UserCog,
   PlusCircle, Loader2, AlertTriangle, Check, X,
   TrendingUp, TrendingDown, Trash2, ToggleLeft, ToggleRight, SlidersHorizontal,
-  MessageSquare, Eye,
+  MessageSquare, Eye, Bell,
 } from "@/lib/icons";
 import toast from "react-hot-toast";
 import { supabase }      from "@/services/supabase";
@@ -1059,6 +1059,13 @@ function AnnouncementsTab() {
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Push notification state
+  const [pushTitle, setPushTitle] = useState("");
+  const [pushBody, setPushBody] = useState("");
+  const [pushUrl, setPushUrl] = useState("/");
+  const [sendingPush, setSendingPush] = useState(false);
+  const [pushResult, setPushResult] = useState<{ sent: number; total: number; cleaned: number } | null>(null);
+
   const { data: all = [], isLoading } = useQuery<Announcement[]>({
     queryKey: ["admin-announcements"],
     queryFn: async () => {
@@ -1101,6 +1108,26 @@ function AnnouncementsTab() {
     qc.invalidateQueries({ queryKey: ["announcements"] });
   };
 
+  const sendPush = async () => {
+    if (!pushTitle.trim() || !pushBody.trim()) { toast.error("Title and message are required"); return; }
+    setSendingPush(true);
+    setPushResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-push-notification", {
+        body: { title: pushTitle.trim(), body: pushBody.trim(), url: pushUrl.trim() || "/" },
+      });
+      if (error) throw error;
+      setPushResult(data);
+      toast.success(`Push sent to ${data.sent} device${data.sent !== 1 ? "s" : ""}!`);
+      setPushTitle(""); setPushBody(""); setPushUrl("/");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to send push notification.");
+    } finally {
+      setSendingPush(false);
+    }
+  };
+
   return (
     <div className="space-y-4 max-w-2xl">
       {/* Create form */}
@@ -1130,6 +1157,50 @@ function AnnouncementsTab() {
           {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Megaphone className="w-3.5 h-3.5" />}
           Publish Announcement
         </button>
+      </div>
+
+      {/* Push notification form */}
+      <div className="bg-[var(--surface-1)] border border-[rgba(56,224,195,0.2)] rounded-2xl p-5 space-y-3">
+        <h3 className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2">
+          <Bell className="w-4 h-4 text-[var(--brand-primary)]" />
+          Push Notification
+          <span className="ml-auto text-[10px] font-normal text-[var(--text-muted)]">Native phone / browser notification</span>
+        </h3>
+        <input
+          placeholder="Title"
+          value={pushTitle}
+          onChange={(e) => setPushTitle(e.target.value)}
+          className="w-full px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-0)] text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30"
+        />
+        <textarea
+          placeholder="Message…"
+          value={pushBody}
+          onChange={(e) => setPushBody(e.target.value)}
+          rows={2}
+          className="w-full px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-0)] text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 resize-none"
+        />
+        <input
+          placeholder="URL to open on tap (default: /)"
+          value={pushUrl}
+          onChange={(e) => setPushUrl(e.target.value)}
+          className="w-full px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-0)] text-[var(--text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30"
+        />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={sendPush}
+            disabled={sendingPush}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl gradient-brand text-white text-sm font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity"
+          >
+            {sendingPush ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
+            Send Push Notification
+          </button>
+          {pushResult && (
+            <p className="text-[11px] text-[var(--text-muted)]">
+              ✓ {pushResult.sent}/{pushResult.total} devices
+              {pushResult.cleaned > 0 ? ` · ${pushResult.cleaned} stale removed` : ""}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Existing announcements */}

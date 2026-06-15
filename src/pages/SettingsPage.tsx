@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTour } from "@/hooks/useTour";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -337,6 +338,7 @@ function AppearanceTab() {
 // ── Notifications Tab ─────────────────────────────────────────────────────────
 function NotificationsTab() {
   const { emailNotifications, setEmailNotifications, lowTokenWarnings, setLowTokenWarnings } = useUIStore();
+  const { isSupported, permission, isSubscribed, isLoading, subscribe, unsubscribe } = usePushNotifications();
 
   const rows = [
     {
@@ -354,19 +356,50 @@ function NotificationsTab() {
   ];
 
   return (
-    <Section title="Notification Preferences">
-      <div className="divide-y divide-[var(--border)]">
-        {rows.map((row) => (
-          <div key={row.label} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
-            <div>
-              <p className="text-sm font-medium text-[var(--text-primary)]">{row.label}</p>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">{row.description}</p>
+    <div className="space-y-4">
+      <Section title="Notification Preferences">
+        <div className="divide-y divide-[var(--border)]">
+          {rows.map((row) => (
+            <div key={row.label} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
+              <div>
+                <p className="text-sm font-medium text-[var(--text-primary)]">{row.label}</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">{row.description}</p>
+              </div>
+              <Toggle on={row.value} onChange={row.onChange} />
             </div>
-            <Toggle on={row.value} onChange={row.onChange} />
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Push Notifications">
+        {!isSupported ? (
+          <p className="text-sm text-[var(--text-muted)]">
+            Not supported in this browser. Install the app and use Chrome or Safari for push notifications.
+          </p>
+        ) : permission === "denied" ? (
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-orange-500/5 border border-orange-500/20">
+            <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+            <p className="text-sm text-[var(--text-secondary)]">
+              Notifications are blocked in your browser. Enable them in browser or phone settings, then reload.
+            </p>
           </div>
-        ))}
-      </div>
-    </Section>
+        ) : (
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-[var(--text-primary)]">Enable Push Notifications</p>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                Receive updates directly on your phone or browser
+              </p>
+            </div>
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin text-[var(--brand-primary)]" />
+            ) : (
+              <Toggle on={isSubscribed} onChange={(v) => (v ? subscribe() : unsubscribe())} />
+            )}
+          </div>
+        )}
+      </Section>
+    </div>
   );
 }
 
