@@ -11,6 +11,7 @@ import { useNotebooks, useNotebookSources, useAIGenerate, useAIOutputs } from "@
 import { SourcePanel }  from "@/components/notebook/SourcePanel";
 import { ChatPanel }    from "@/components/notebook/ChatPanel";
 import { StudioPanel }  from "@/components/notebook/StudioPanel";
+import { NotebookUploadScreen } from "@/components/notebook/NotebookUploadScreen";
 import { OutputModal }             from "@/components/notebook/OutputModal";
 import { UploadModal }             from "@/components/notebook/UploadModal";
 import { GenerationOptionsModal }  from "@/components/notebook/GenerationOptionsModal";
@@ -32,9 +33,9 @@ function ResizeHandle() {
 type MobileTab = "sources" | "chat" | "studio";
 
 const MOBILE_TABS: { id: MobileTab; label: string; icon: React.ElementType }[] = [
-  { id: "sources", label: "Sources", icon: BookOpen      },
-  { id: "chat",    label: "Chat",    icon: MessageSquare },
-  { id: "studio",  label: "Studio",  icon: Sparkles      },
+  { id: "sources", label: "Sources",  icon: BookOpen      },
+  { id: "chat",    label: "Chat AI",  icon: MessageSquare },
+  { id: "studio",  label: "Generate", icon: Sparkles      },
 ];
 
 // ── Notebook onboarding progress steps ───────────────────────────────────────
@@ -133,7 +134,7 @@ export default function NotebookPage() {
   // ── Restore tab/modal from sessionStorage so state survives screen-off ──
   const [mobileTab, _setMobileTab] = useState<MobileTab>(() => {
     const saved = notebookId ? ssGet(`nb-tab-${notebookId}`) : null;
-    return (saved as MobileTab) ?? "chat";
+    return (saved as MobileTab) ?? "studio";
   });
   const setMobileTab = useCallback((tab: MobileTab) => {
     _setMobileTab(tab);
@@ -291,6 +292,17 @@ export default function NotebookPage() {
   return (
     <div className="h-full overflow-hidden flex flex-col">
 
+      {/* ── No sources: show the upload / onboarding screen ───────────────── */}
+      {sources.length === 0 && (
+        <NotebookUploadScreen
+          notebookId={notebookId}
+          notebookTitle={activeNotebook?.title ?? "New Notebook"}
+        />
+      )}
+
+      {/* ── Has sources: three-panel notebook view ────────────────────────── */}
+      {sources.length > 0 && <>
+
       {/* ── Mobile / tablet: tab bar (replaces the navbar on mobile) ──────── */}
       <div className="md:hidden flex items-center border-b border-[var(--border)] bg-[var(--surface-0)] shrink-0">
         {/* Back to notebooks */}
@@ -433,6 +445,9 @@ export default function NotebookPage() {
 
         </PanelGroup>
       </div>
+
+      {/* ── End of three-panel view ────────────────────────────────────────── */}
+      </>}
 
       {/* ── Output modal ───────────────────────────────────────────────────── */}
       <OutputModal

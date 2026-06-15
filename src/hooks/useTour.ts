@@ -234,8 +234,8 @@ export function useTour() {
           },
           forceTabStep(
             "#tour-chat-tab",
-            "Chat",
-            "👆 Tap Chat to ask the AI questions about your sources.",
+            "Chat AI",
+            "👆 Tap Chat AI to ask questions about your sources.",
             "chat",
           ),
           {
@@ -251,8 +251,8 @@ export function useTour() {
           },
           forceTabStep(
             "#tour-study-tab",
-            "Studio",
-            "👆 Tap Studio to generate quizzes, flashcards, summaries, and more.",
+            "Generate",
+            "👆 Tap Generate to create quizzes, flashcards, summaries, and more.",
             "studio",
           ),
           ...studioFeatureSteps,
@@ -272,7 +272,7 @@ export function useTour() {
           {
             element: "#tour-chat-input",
             popover: {
-              title: "Chat with your sources",
+              title: "Chat AI — ask your sources",
               description:
                 'Ask "summarise this", "key concepts?" or any question — answered only from your uploaded materials.',
               side: "top",

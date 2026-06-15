@@ -377,51 +377,37 @@ export function ChatPanel({ notebookId }: Props) {
 
       {/* Input bar */}
       <div id="tour-chat-input" className="px-4 py-3 border-t border-[var(--border)] bg-[var(--surface-0)]">
-        {sources.length === 0 ? (
-          <div
-            className="flex items-center gap-3 py-2.5 px-4 rounded-2xl"
-            style={{ background: "rgba(255,255,255,0.025)", border: "0.5px solid var(--border)" }}
-          >
-            <span className="text-base shrink-0">📁</span>
-            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-              Add a source first — then ask me anything about it.
-            </p>
+        <div className="flex items-end gap-2 p-2 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] focus-within:border-[var(--brand-primary)] transition-colors">
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask anything about your sources… (Shift+Enter for newline)"
+            rows={1}
+            className="flex-1 bg-transparent text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none resize-none leading-5 max-h-40 scrollbar-thin py-1 px-1"
+          />
+          <div className="flex items-center gap-2 shrink-0 pb-0.5">
+            <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-0.5">
+              <Zap className="w-2.5 h-2.5" />{chatCost}
+            </span>
+            <button
+              onClick={handleSend}
+              disabled={!input.trim() || isStreaming}
+              className={cn(
+                "w-8 h-8 rounded-xl flex items-center justify-center transition-all",
+                input.trim() && !isStreaming
+                  ? "gradient-brand text-white hover:opacity-90"
+                  : "bg-[var(--surface-2)] text-[var(--text-muted)] cursor-not-allowed"
+              )}
+            >
+              <Send className="w-3.5 h-3.5" />
+            </button>
           </div>
-        ) : (
-          <>
-            <div className="flex items-end gap-2 p-2 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] focus-within:border-[var(--brand-primary)] transition-colors">
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask anything about your sources… (Shift+Enter for newline)"
-                rows={1}
-                className="flex-1 bg-transparent text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none resize-none leading-5 max-h-40 scrollbar-thin py-1 px-1"
-              />
-              <div className="flex items-center gap-2 shrink-0 pb-0.5">
-                <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-0.5">
-                  <Zap className="w-2.5 h-2.5" />{chatCost}
-                </span>
-                <button
-                  onClick={handleSend}
-                  disabled={!input.trim() || isStreaming}
-                  className={cn(
-                    "w-8 h-8 rounded-xl flex items-center justify-center transition-all",
-                    input.trim() && !isStreaming
-                      ? "gradient-brand text-white hover:opacity-90"
-                      : "bg-[var(--surface-2)] text-[var(--text-muted)] cursor-not-allowed"
-                  )}
-                >
-                  <Send className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-            <p className="text-[10px] text-[var(--text-muted)] mt-1.5 text-center">
-              StudyLM may make mistakes. Verify important information.
-            </p>
-          </>
-        )}
+        </div>
+        <p className="text-[10px] text-[var(--text-muted)] mt-1.5 text-center">
+          StudyLM may make mistakes. Verify important information.
+        </p>
       </div>
     </div>
   );

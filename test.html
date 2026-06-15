@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>StudyAI — Upload Screen</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Space+Grotesk:wght@400;500&display=swap"
+      rel="stylesheet" />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: #060e1a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 20px;
+        font-family: "Inter", sans-serif;
+      }
+
+      .shell {
+        display: flex;
+        height: 600px;
+        width: 900px;
+        background: #0a1628;
+        border-radius: 14px;
+        overflow: hidden;
+        position: relative;
+        border: 0.5px solid rgba(255, 255, 255, 0.08);
+      }
+      .orb1 {
+        position: absolute;
+        width: 420px;
+        height: 420px;
+        border-radius: 50%;
+        background: rgba(56, 224, 195, 0.1);
+        top: -140px;
+        left: -80px;
+        pointer-events: none;
+        z-index: 0;
+      }
+      .orb2 {
+        position: absolute;
+        width: 300px;
+        height: 300px;
+        border-radius: 50%;
+        background: rgba(99, 179, 255, 0.07);
+        bottom: -60px;
+        right: 60px;
+        pointer-events: none;
+        z-index: 0;
+      }
+      .orb3 {
+        position: absolute;
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        background: rgba(56, 224, 195, 0.05);
+        top: 40%;
+        right: 28%;
+        pointer-events: none;
+        z-index: 0;
+      }
+      .shine {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 0.5px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(56, 224, 195, 0.45),
+          rgba(255, 255, 255, 0.2),
+          transparent
+        );
+        z-index: 10;
+        pointer-events: none;
+        border-radius: 14px 14px 0 0;
+      }
+
+      /* SIDEBAR */
+      .sidebar {
+        width: 56px;
+        min-width: 56px;
+        background: rgba(255, 255, 255, 0.03);
+        border-right: 0.5px solid rgba(255, 255, 255, 0.07);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 18px 0;
+        position: relative;
+        z-index: 1;
+      }
+      .logo-dot {
+        width: 30px;
+        height: 30px;
+        border-radius: 9px;
+        background: rgba(56, 224, 195, 0.18);
+        border: 0.5px solid rgba(56, 224, 195, 0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 24px;
+      }
+      .logo-dot i {
+        font-size: 15px;
+        color: #38e0c3;
+      }
+      .side-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 6px;
+        cursor: pointer;
+        color: rgba(255, 255, 255, 0.25);
+      }
+      .side-icon i {
+        font-size: 17px;
+      }
+      .side-icon.active {
+        background: rgba(56, 224, 195, 0.1);
+        border: 0.5px solid rgba(56, 224, 195, 0.2);
+        color: #38e0c3;
+      }
+
+      /* MAIN */
+      .main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        z-index: 1;
+        overflow: hidden;
+      }
+
+      /* TOPBAR */
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 24px;
+        border-bottom: 0.5px solid rgba(255, 255, 255, 0.06);
+      }
+      .app-name {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        color: #fff;
+        letter-spacing: -0.01em;
+      }
+      .topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .token-pill {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 10px;
+        border-radius: 20px;
+        background: rgba(56, 224, 195, 0.08);
+        border: 0.5px solid rgba(56, 224, 195, 0.2);
+        font-size: 11.5px;
+        font-weight: 500;
+        color: #38e0c3;
+      }
+      .token-pill i {
+        font-size: 12px;
+      }
+      .avatar-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: rgba(56, 224, 195, 0.12);
+        border: 0.5px solid rgba(56, 224, 195, 0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 500;
+        color: #38e0c3;
+      }
+
+      /* BODY */
+      .body {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+      }
+
+      /* LEFT */
+      .left-col {
+        flex: 1;
+        padding: 26px 24px;
+        display: flex;
+        flex-direction: column;
+        border-right: 0.5px solid rgba(255, 255, 255, 0.06);
+        overflow-y: auto;
+      }
+      .hero-label {
+        font-size: 10.5px;
+        font-weight: 500;
+        color: rgba(56, 224, 195, 0.6);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 7px;
+      }
+      .hero-title {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 21px;
+        font-weight: 500;
+        color: #fff;
+        letter-spacing: -0.02em;
+        line-height: 1.25;
+        margin-bottom: 5px;
+      }
+      .hero-sub {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.32);
+        margin-bottom: 20px;
+        line-height: 1.55;
+        max-width: 360px;
+      }
+
+      /* UPLOAD ZONE */
+      .upload-zone {
+        border: 1px dashed rgba(56, 224, 195, 0.22);
+        border-radius: 14px;
+        background: rgba(56, 224, 195, 0.04);
+        padding: 24px 20px;
+        text-align: center;
+        margin-bottom: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .upload-zone:hover {
+        border-color: rgba(56, 224, 195, 0.4);
+        background: rgba(56, 224, 195, 0.07);
+      }
+      .upload-icon-wrap {
+        width: 46px;
+        height: 46px;
+        border-radius: 13px;
+        background: rgba(56, 224, 195, 0.1);
+        border: 0.5px solid rgba(56, 224, 195, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 10px;
+      }
+      .upload-icon-wrap i {
+        font-size: 21px;
+        color: #38e0c3;
+        opacity: 0.8;
+      }
+      .upload-title {
+        font-size: 13px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.8);
+        margin-bottom: 3px;
+      }
+      .upload-sub {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.28);
+        margin-bottom: 12px;
+      }
+      .file-types {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+      }
+      .ftp {
+        padding: 3px 9px;
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 0.5px solid rgba(255, 255, 255, 0.09);
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.38);
+        font-weight: 500;
+      }
+
+      .or-div {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+      .or-line {
+        flex: 1;
+        height: 0.5px;
+        background: rgba(255, 255, 255, 0.07);
+      }
+      .or-text {
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.2);
+      }
+
+      /* SOURCE TYPES */
+      .source-types {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+      .source-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        padding: 10px 8px;
+        border-radius: 11px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 0.5px solid rgba(255, 255, 255, 0.08);
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .source-btn:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(56, 224, 195, 0.2);
+      }
+      .source-btn i {
+        font-size: 18px;
+        color: rgba(255, 255, 255, 0.32);
+      }
+      .source-btn span {
+        font-size: 10.5px;
+        color: rgba(255, 255, 255, 0.38);
+      }
+
+      /* ACTIONS */
+      .mini-label {
+        font-size: 10px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.22);
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        margin-bottom: 9px;
+      }
+      .action-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .action-card {
+        padding: 11px 13px;
+        border-radius: 11px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 0.5px solid rgba(255, 255, 255, 0.08);
+        cursor: pointer;
+        transition: all 0.15s;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+      .action-card:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(56, 224, 195, 0.18);
+      }
+      .action-card.primary {
+        background: rgba(56, 224, 195, 0.08);
+        border-color: rgba(56, 224, 195, 0.22);
+      }
+      .action-card.primary:hover {
+        background: rgba(56, 224, 195, 0.14);
+      }
+      .action-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .action-icon i {
+        font-size: 15px;
+      }
+      .action-label {
+        font-size: 12px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.72);
+      }
+      .action-card.primary .action-label {
+        color: #38e0c3;
+      }
+      .action-cost {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.22);
+      }
+      .action-cost i {
+        font-size: 10px;
+      }
+      .action-card.primary .action-cost {
+        color: rgba(56, 224, 195, 0.4);
+      }
+
+      /* RIGHT */
+      .right-col {
+        width: 220px;
+        min-width: 220px;
+        padding: 20px 16px;
+        overflow-y: auto;
+      }
+      .preview-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+      .preview-title {
+        font-size: 12px;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.45);
+      }
+      .preview-badge {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 10px;
+        color: rgba(56, 224, 195, 0.5);
+      }
+      .live-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: #38e0c3;
+        opacity: 0.7;
+        animation: livepulse 1.5s infinite;
+      }
+      @keyframes livepulse {
+        0%,
+        100% {
+          opacity: 0.7;
+        }
+        50% {
+          opacity: 0.25;
+        }
+      }
+
+      .preview-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 0.5px solid rgba(255, 255, 255, 0.07);
+        border-radius: 10px;
+        padding: 11px;
+        margin-bottom: 9px;
+      }
+      .pc-label {
+        font-size: 9.5px;
+        font-weight: 500;
+        color: rgba(56, 224, 195, 0.5);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 7px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .pc-label i {
+        font-size: 11px;
+      }
+      .pline {
+        height: 5px;
+        border-radius: 3px;
+        background: rgba(255, 255, 255, 0.07);
+        margin-bottom: 4px;
+      }
+      .pline.s {
+        width: 55%;
+      }
+      .pline.m {
+        width: 78%;
+      }
+      .pline.l {
+        width: 100%;
+      }
+
+      .fc-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        margin-top: 3px;
+      }
+      .fc-m {
+        background: rgba(255, 255, 255, 0.04);
+        border: 0.5px solid rgba(255, 255, 255, 0.07);
+        border-radius: 6px;
+        padding: 6px;
+        text-align: center;
+      }
+      .fc-q {
+        font-size: 8.5px;
+        color: rgba(255, 255, 255, 0.28);
+        margin-bottom: 3px;
+      }
+      .fc-a {
+        height: 12px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .quiz-q {
+        font-size: 9px;
+        color: rgba(255, 255, 255, 0.42);
+        margin-bottom: 5px;
+        line-height: 1.4;
+      }
+      .qopt {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 6px;
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 0.5px solid rgba(255, 255, 255, 0.07);
+        margin-bottom: 3px;
+      }
+      .qopt.c {
+        background: rgba(56, 224, 195, 0.07);
+        border-color: rgba(56, 224, 195, 0.18);
+      }
+      .qdot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.14);
+        flex-shrink: 0;
+      }
+      .qdot.c {
+        background: #38e0c3;
+      }
+      .qopt span {
+        font-size: 8.5px;
+        color: rgba(255, 255, 255, 0.28);
+      }
+      .qopt.c span {
+        color: rgba(56, 224, 195, 0.65);
+      }
+
+      .hint {
+        display: flex;
+        align-items: flex-start;
+        gap: 7px;
+        padding: 9px 11px;
+        border-radius: 9px;
+        background: rgba(56, 224, 195, 0.04);
+        border: 0.5px solid rgba(56, 224, 195, 0.12);
+        margin-top: 12px;
+      }
+      .hint i {
+        font-size: 13px;
+        color: rgba(56, 224, 195, 0.45);
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+      .hint p {
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.3);
+        line-height: 1.5;
+      }
+      .hint span {
+        color: rgba(56, 224, 195, 0.55);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="shine"></div>
+      <div class="orb1"></div>
+      <div class="orb2"></div>
+      <div class="orb3"></div>
+
+      <div class="sidebar">
+        <div class="logo-dot"><i class="ti ti-bolt"></i></div>
+        <div class="side-icon active">
+          <i class="ti ti-layout-dashboard"></i>
+        </div>
+        <div class="side-icon"><i class="ti ti-notebook"></i></div>
+        <div class="side-icon"><i class="ti ti-library"></i></div>
+        <div class="side-icon"><i class="ti ti-chess"></i></div>
+        <div class="side-icon"><i class="ti ti-user"></i></div>
+      </div>
+
+      <div class="main">
+        <div class="topbar">
+          <span class="app-name">StudyAI</span>
+          <div class="topbar-right">
+            <div class="token-pill">
+              <i class="ti ti-bolt"></i><span>1,000 tokens</span>
+            </div>
+            <div class="avatar-btn">JS</div>
+          </div>
+        </div>
+
+        <div class="body">
+          <div class="left-col">
+            <div class="hero-label">✦ New notebook</div>
+            <div class="hero-title">
+              Upload your material,<br />we'll build your study kit.
+            </div>
+            <div class="hero-sub">
+              Drop anything — PDF, DOCX, a YouTube link, or paste your notes.
+              StudyAI reads it and generates everything you need to ace your
+              exams.
+            </div>
+
+            <div class="upload-zone">
+              <div class="upload-icon-wrap">
+                <i class="ti ti-cloud-upload"></i>
+              </div>
+              <div class="upload-title">Drop your file here</div>
+              <div class="upload-sub">or choose a source type below</div>
+              <div class="file-types">
+                <span class="ftp">PDF</span>
+                <span class="ftp">DOCX</span>
+                <span class="ftp">TXT</span>
+                <span class="ftp">PPT</span>
+              </div>
+            </div>
+
+            <div class="or-div">
+              <div class="or-line"></div>
+              <span class="or-text">or add from</span>
+              <div class="or-line"></div>
+            </div>
+
+            <div class="source-types">
+              <div class="source-btn">
+                <i class="ti ti-link"></i><span>Paste URL</span>
+              </div>
+              <div class="source-btn">
+                <i class="ti ti-brand-youtube"></i><span>YouTube</span>
+              </div>
+              <div class="source-btn">
+                <i class="ti ti-text-caption"></i><span>Type notes</span>
+              </div>
+            </div>
+
+            <div class="mini-label">Then generate →</div>
+            <div class="action-grid">
+              <div class="action-card primary">
+                <div
+                  class="action-icon"
+                  style="background: rgba(56, 224, 195, 0.12)">
+                  <i class="ti ti-file-text" style="color: #38e0c3"></i>
+                </div>
+                <span class="action-label">Summary</span>
+                <div class="action-cost"><i class="ti ti-bolt"></i>5</div>
+              </div>
+              <div class="action-card primary">
+                <div
+                  class="action-icon"
+                  style="background: rgba(56, 224, 195, 0.12)">
+                  <i class="ti ti-cards" style="color: #38e0c3"></i>
+                </div>
+                <span class="action-label">Flashcards</span>
+                <div class="action-cost"><i class="ti ti-bolt"></i>1</div>
+              </div>
+              <div class="action-card">
+                <div
+                  class="action-icon"
+                  style="background: rgba(255, 255, 255, 0.05)">
+                  <i
+                    class="ti ti-help-circle"
+                    style="color: rgba(255, 255, 255, 0.32)"></i>
+                </div>
+                <span class="action-label">Quiz</span>
+                <div class="action-cost"><i class="ti ti-bolt"></i>1</div>
+              </div>
+              <div class="action-card">
+                <div
+                  class="action-icon"
+                  style="background: rgba(255, 255, 255, 0.05)">
+                  <i
+                    class="ti ti-network"
+                    style="color: rgba(255, 255, 255, 0.32)"></i>
+                </div>
+                <span class="action-label">Mind Map</span>
+                <div class="action-cost"><i class="ti ti-bolt"></i>5</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="right-col">
+            <div class="preview-header">
+              <span class="preview-title">Preview</span>
+              <div class="preview-badge">
+                <div class="live-dot"></div>
+                <span>Live</span>
+              </div>
+            </div>
+
+            <div class="preview-card">
+              <div class="pc-label"><i class="ti ti-file-text"></i>Summary</div>
+              <div class="pline l"></div>
+              <div class="pline m"></div>
+              <div class="pline l"></div>
+              <div class="pline s"></div>
+            </div>
+
+            <div class="preview-card">
+              <div class="pc-label"><i class="ti ti-cards"></i>Flashcards</div>
+              <div class="fc-grid">
+                <div class="fc-m">
+                  <div class="fc-q">Term</div>
+                  <div class="fc-a"></div>
+                </div>
+                <div class="fc-m">
+                  <div class="fc-q">Term</div>
+                  <div class="fc-a"></div>
+                </div>
+                <div class="fc-m">
+                  <div class="fc-q">Term</div>
+                  <div class="fc-a"></div>
+                </div>
+                <div class="fc-m">
+                  <div class="fc-q">Term</div>
+                  <div class="fc-a"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="preview-card">
+              <div class="pc-label"><i class="ti ti-help-circle"></i>Quiz</div>
+              <div class="quiz-q">What is the main concept in this topic?</div>
+              <div class="qopt c">
+                <div class="qdot c"></div>
+                <span>Correct answer</span>
+              </div>
+              <div class="qopt">
+                <div class="qdot"></div>
+                <span>Option B</span>
+              </div>
+              <div class="qopt">
+                <div class="qdot"></div>
+                <span>Option C</span>
+              </div>
+            </div>
+
+            <div class="hint">
+              <i class="ti ti-info-circle"></i>
+              <p>
+                Upload a file to see your <span>real preview</span> generated
+                instantly from your content
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
