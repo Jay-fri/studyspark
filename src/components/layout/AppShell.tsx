@@ -12,6 +12,7 @@ import { Navbar } from "./Navbar";
 import { MobileNav } from "./MobileNav";
 import { OfflineBanner } from "./OfflineBanner";
 import { PWAPrompt } from "./PWAPrompt";
+import { PushNotificationPrompt } from "@/components/PushNotificationPrompt";
 import { TokenBanner } from "@/components/payment/TokenBanner";
 import { PaymentModal } from "@/components/payment/PaymentModal";
 import { CommandPalette } from "@/components/ui/CommandPalette";
@@ -402,6 +403,7 @@ export function AppShell() {
       <CommandPalette />
       <PaymentModal />
       <PWAPrompt />
+      <PushNotificationPrompt />
 
       <Toaster
         position="bottom-right"
