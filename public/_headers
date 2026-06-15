@@ -1,8 +1,8 @@
 # Cloudflare Pages response headers
 
-# Web App Manifest — must be application/json for Chrome to recognise it as a PWA manifest
+# Web App Manifest — must be application/manifest+json for Chrome to recognise it as a PWA manifest
 /manifest.json
-  Content-Type: application/json
+  Content-Type: application/manifest+json
   Cache-Control: no-store
 
 # Service worker — must never be cached so updates roll out immediately
