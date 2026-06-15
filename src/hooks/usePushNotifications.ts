@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/services/supabase";
 import toast from "react-hot-toast";
 
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string;
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
 
 function urlBase64ToUint8Array(base64: string): Uint8Array {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -33,6 +33,10 @@ export function usePushNotifications() {
     }
     setIsLoading(true);
     try {
+      if (!VAPID_PUBLIC_KEY) {
+        toast.error("Push notifications are not configured yet.");
+        return;
+      }
       const perm = await Notification.requestPermission();
       setPermission(perm);
       if (perm !== "granted") {
