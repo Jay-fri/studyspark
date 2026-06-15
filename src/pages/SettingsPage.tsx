@@ -338,7 +338,7 @@ function AppearanceTab() {
 // ── Notifications Tab ─────────────────────────────────────────────────────────
 function NotificationsTab() {
   const { emailNotifications, setEmailNotifications, lowTokenWarnings, setLowTokenWarnings } = useUIStore();
-  const { isSupported, permission, isSubscribed, isLoading, subscribe, unsubscribe } = usePushNotifications();
+  const { isSupported, inAppBrowser, permission, isSubscribed, isLoading, subscribe, unsubscribe } = usePushNotifications();
 
   const rows = [
     {
@@ -372,9 +372,16 @@ function NotificationsTab() {
       </Section>
 
       <Section title="Push Notifications">
-        {!isSupported ? (
+        {inAppBrowser ? (
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-orange-500/5 border border-orange-500/20">
+            <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+            <p className="text-sm text-[var(--text-secondary)]">
+              Open StudyLM directly in <strong>Chrome</strong> (not via WhatsApp, Instagram, or another app's browser) to enable push notifications.
+            </p>
+          </div>
+        ) : !isSupported ? (
           <p className="text-sm text-[var(--text-muted)]">
-            Not supported in this browser. Install the app and use Chrome or Safari for push notifications.
+            Push notifications require Chrome on Android or Safari on iOS 16.4+.
           </p>
         ) : permission === "denied" ? (
           <div className="flex items-start gap-3 p-3 rounded-xl bg-orange-500/5 border border-orange-500/20">

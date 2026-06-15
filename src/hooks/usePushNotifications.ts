@@ -11,11 +11,20 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
 }
 
+// Detect in-app browsers (WhatsApp, Instagram, Facebook, etc.) which block Push.
+// These embed a Chrome WebView that omits PushManager even though the UA says "Chrome".
+function isInAppBrowser(): boolean {
+  const ua = navigator.userAgent;
+  return /FBAN|FBAV|Instagram|WhatsApp|Snapchat|TikTok|Line|WeChat|MicroMessenger/.test(ua)
+    || (/wv/.test(ua) && /Android/.test(ua));
+}
+
 export function usePushNotifications() {
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const isSupported = "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
+  const inAppBrowser = isInAppBrowser();
+  const isSupported = !inAppBrowser && "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
 
   useEffect(() => {
     if (!isSupported) return;
@@ -86,5 +95,5 @@ export function usePushNotifications() {
     }
   };
 
-  return { isSupported, permission, isSubscribed, isLoading, subscribe, unsubscribe };
+  return { isSupported, inAppBrowser, permission, isSubscribed, isLoading, subscribe, unsubscribe };
 }

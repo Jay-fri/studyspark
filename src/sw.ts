@@ -1,4 +1,5 @@
 /// <reference lib="webworker" />
+import { clientsClaim } from "workbox-core";
 import { cleanupOutdatedCaches, precacheAndRoute, createHandlerBoundToURL } from "workbox-precaching";
 import { NavigationRoute, registerRoute } from "workbox-routing";
 import { CacheFirst, NetworkFirst } from "workbox-strategies";
@@ -6,6 +7,17 @@ import { CacheableResponsePlugin } from "workbox-cacheable-response";
 import { ExpirationPlugin } from "workbox-expiration";
 
 declare const self: ServiceWorkerGlobalScope;
+
+// Take control of all existing clients as soon as the SW activates.
+// Required for autoUpdate mode — without this Chrome keeps the old SW alive
+// until all tabs are closed, so the install prompt and push APIs never show.
+clientsClaim();
+
+// When the app sends SKIP_WAITING (via virtual:pwa-register autoUpdate),
+// activate the new SW immediately instead of waiting for tabs to close.
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+});
 
 // Precache all build assets (manifest injected by VitePWA at build time)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
