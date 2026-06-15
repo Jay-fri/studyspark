@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import { Loader2, Zap, RefreshCw, ChevronRight, ChevronLeft } from "@/lib/icons";
 import { useTokenCosts } from "@/hooks/useTokenCosts";
+import { useNotebookStore } from "@/stores/notebookStore";
 import { cn } from "@/lib/utils";
 import type { AIOutput, AIOutputType } from "@/types";
 
@@ -39,6 +40,7 @@ export function StudioPanel({
 }: Props) {
   const [hoveredType, setHoveredType] = useState<AIOutputType | null>(null);
   const costs = useTokenCosts();
+  const sources = useNotebookStore((s) => s.sources);
 
   const safeOutputs = outputs ?? [];
   const getOutput = (type: AIOutputType) => safeOutputs.find((o) => o.type === type) ?? null;
@@ -87,7 +89,36 @@ export function StudioPanel({
   }
 
   return (
-    <div className="flex flex-col h-full bg-[var(--surface-1)] overflow-hidden">
+    <div className="relative flex flex-col h-full bg-[var(--surface-1)] overflow-hidden">
+
+      {/* No sources overlay */}
+      {sources.length === 0 && (
+        <div
+          className="absolute inset-0 z-10 flex items-center justify-center"
+          style={{ backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", background: "rgba(10,22,40,0.65)" }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.2 }}
+            className="text-center px-6 py-8 rounded-2xl mx-4"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "0.5px solid rgba(56,224,195,0.22)",
+              maxWidth: 220,
+            }}
+          >
+            <span className="text-3xl block mb-3">🔒</span>
+            <p className="text-sm font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
+              Add a source to unlock
+            </p>
+            <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+              Upload a PDF or paste a link in the Sources tab first.
+            </p>
+          </motion.div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] shrink-0">
         <h2 className="text-sm font-semibold text-[var(--text-primary)]">Studio</h2>
@@ -120,7 +151,7 @@ export function StudioPanel({
             Create
           </p>
           <div className="grid grid-cols-2 gap-2">
-            {STUDIO_ITEMS.map(({ type, label, icon, desc }) => {
+            {STUDIO_ITEMS.map(({ type, label, icon, desc }, i) => {
               const output   = getOutput(type);
               const isThis   = isGenerating && generatingType === type;
               const cost     = costs[type as keyof typeof costs];
@@ -148,6 +179,18 @@ export function StudioPanel({
                       : "border-[var(--border)] bg-[var(--surface-0)] hover:border-[var(--border)] hover:bg-[var(--surface-2)]"
                   )}
                 >
+                  {/* Start here badge on first card when no outputs */}
+                  {i === 0 && safeOutputs.length === 0 && sources.length > 0 && (
+                    <motion.span
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.4 }}
+                      className="absolute -top-2 -right-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold z-10"
+                      style={{ background: "#38E0C3", color: "#0a1628" }}
+                    >
+                      Start here
+                    </motion.span>
+                  )}
                   <div className="flex items-center justify-between w-full">
                     <span className="text-lg leading-none">{icon}</span>
                     {isThis ? (

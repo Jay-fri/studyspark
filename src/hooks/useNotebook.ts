@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useCallback } from "react";
+import toast from "react-hot-toast";
 import { supabase } from "@/services/supabase";
 import { useNotebookStore } from "@/stores/notebookStore";
 import { useAuthStore } from "@/stores/authStore";
@@ -43,7 +44,11 @@ export function useNotebooks() {
       if (error) throw error;
       return data as Notebook;
     },
-    onSuccess: (nb) => { addNotebook(nb); qc.invalidateQueries({ queryKey: ["notebooks"] }); },
+    onSuccess: (nb) => {
+      addNotebook(nb);
+      qc.invalidateQueries({ queryKey: ["notebooks"] });
+      toast.success("Notebook created!");
+    },
   });
 
   const patchNotebook = useMutation({

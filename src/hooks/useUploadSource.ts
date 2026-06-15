@@ -128,6 +128,7 @@ export function useUploadSource(notebookId: string) {
       } else {
         updateSource({ ...source, processing_status: "ready" });
         qc.invalidateQueries({ queryKey: ["sources", notebookId] });
+        toast.success(`"${source.title}" is ready — head to Studio to generate study materials!`, { duration: 5000 });
       }
 
       setProgress({ filename: file.name, stage: "done", percent: 100 });

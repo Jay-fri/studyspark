@@ -307,13 +307,38 @@ export default function LibraryPage() {
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col items-center justify-center py-24 text-center"
           >
-            <p className="text-4xl mb-4">📚</p>
+            <motion.div
+              animate={{ y: [0, -6, 0] }}
+              transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
+              className="text-4xl mb-4"
+            >
+              📚
+            </motion.div>
             <h3 className="text-base font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
               Your library is empty
             </h3>
-            <p className="text-sm max-w-xs" style={{ color: "var(--text-muted)" }}>
+            <p className="text-sm max-w-xs mb-6" style={{ color: "var(--text-muted)" }}>
               Open a notebook and generate a summary, quiz, or flashcards — they'll all appear here.
             </p>
+            <Link
+              to="/notebooks"
+              className="px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
+              style={{
+                background: "rgba(56,224,195,0.09)",
+                border: "0.5px solid rgba(56,224,195,0.22)",
+                color: "#38E0C3",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(56,224,195,0.15)";
+                e.currentTarget.style.borderColor = "rgba(56,224,195,0.35)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(56,224,195,0.09)";
+                e.currentTarget.style.borderColor = "rgba(56,224,195,0.22)";
+              }}
+            >
+              Open a notebook →
+            </Link>
           </motion.div>
         )}
 

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -40,6 +40,96 @@ const TYPE_COLOR: Record<Source["type"], string> = {
   url:  "text-brand-accent",
   text: "text-brand-primary",
 };
+
+function NoSourcesState() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className="flex flex-col items-center pt-8 pb-4 px-4 text-center"
+    >
+      <motion.div
+        animate={{ y: [0, -5, 0] }}
+        transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
+        className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+        style={{ background: "rgba(56,224,195,0.07)", border: "0.5px solid rgba(56,224,195,0.18)" }}
+      >
+        <FileText className="w-6 h-6" style={{ color: "rgba(56,224,195,0.45)" }} />
+      </motion.div>
+      <p className="text-sm font-medium mb-1" style={{ color: "var(--text-primary)" }}>
+        No sources yet
+      </p>
+      <p className="text-[11px] mb-5" style={{ color: "var(--text-muted)" }}>
+        Upload materials to unlock AI study tools
+      </p>
+      <div className="w-full space-y-1.5 text-left">
+        {[
+          "Upload a PDF, DOCX, or text file",
+          "Ask questions about it in Chat",
+          "Generate quizzes, flashcards & more",
+        ].map((label, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-2.5 px-3 py-2 rounded-xl"
+            style={{
+              background: "rgba(255,255,255,0.025)",
+              border: "0.5px solid rgba(255,255,255,0.06)",
+            }}
+          >
+            <span
+              className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
+              style={{
+                background: "rgba(56,224,195,0.1)",
+                color: "#38E0C3",
+                border: "0.5px solid rgba(56,224,195,0.18)",
+              }}
+            >
+              {i + 1}
+            </span>
+            <span className="text-[11px]" style={{ color: "var(--text-secondary)" }}>
+              {label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+function SourceReadyNudge({ title, onDismiss }: { title: string; onDismiss: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 8000);
+    return () => clearTimeout(t);
+  }, [onDismiss]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.2 }}
+      className="overflow-hidden"
+    >
+      <div
+        className="flex items-center gap-2 px-3 py-2 mx-3 mb-2 rounded-xl cursor-pointer"
+        style={{ background: "rgba(56,224,195,0.07)", border: "0.5px solid rgba(56,224,195,0.22)" }}
+        onClick={onDismiss}
+      >
+        <span className="text-sm shrink-0">✅</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] font-medium truncate" style={{ color: "var(--text-primary)" }}>
+            "{title}" is ready
+          </p>
+          <p className="text-[10px]" style={{ color: "rgba(56,224,195,0.65)" }}>
+            Switch to Studio to generate study materials →
+          </p>
+        </div>
+        <X className="w-3 h-3 shrink-0" style={{ color: "var(--text-muted)" }} />
+      </div>
+    </motion.div>
+  );
+}
 
 function SourceItem({
   source,
@@ -160,6 +250,26 @@ export function SourcePanel({ notebookId, collapsed, onCollapse }: Props) {
   const { activeNotebook, sources, selectedSourceIds, setSelectedSourceIds, toggleSourceSelect } = useNotebookStore();
   const { renameSource, deleteSource } = useNotebookSources(notebookId);
 
+  const prevProcessingRef = useRef<Set<string>>(new Set<string>());
+  const [readyNudge, setReadyNudge] = useState<string | null>(null);
+
+  useEffect(() => {
+    const nowProcessing = new Set(
+      sources
+        .filter((s) => s.processing_status === "pending" || s.processing_status === "processing")
+        .map((s) => s.id)
+    );
+    const justFinished = sources.find(
+      (s) =>
+        prevProcessingRef.current.has(s.id) &&
+        s.processing_status !== "pending" &&
+        s.processing_status !== "processing" &&
+        s.processing_status !== "error"
+    );
+    if (justFinished) setReadyNudge(justFinished.title);
+    prevProcessingRef.current = nowProcessing;
+  }, [sources]);
+
   const isAllSelected = selectedSourceIds === "all";
 
   const handleDelete = (id: string, title: string) => {
@@ -254,6 +364,13 @@ export function SourcePanel({ notebookId, collapsed, onCollapse }: Props) {
             </button>
           </div>
 
+          {/* Source ready nudge */}
+          <AnimatePresence>
+            {readyNudge && (
+              <SourceReadyNudge title={readyNudge} onDismiss={() => setReadyNudge(null)} />
+            )}
+          </AnimatePresence>
+
           {/* Source selection toggle */}
           {sources.length > 0 && (
             <div className="px-3 py-2 border-b border-border">
@@ -275,13 +392,7 @@ export function SourcePanel({ notebookId, collapsed, onCollapse }: Props) {
           {/* Source list */}
           <div className="flex-1 overflow-y-auto scrollbar-thin px-2 py-2 space-y-0.5">
             {sources.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-                <FileText className="w-8 h-8 text-text-muted mb-2" />
-                <p className="text-xs font-medium text-text-secondary">No sources yet</p>
-                <p className="text-[11px] text-text-muted mt-1">
-                  Upload PDFs, DOCX, or paste text to get started
-                </p>
-              </div>
+              <NoSourcesState />
             ) : (
               sources.map((src) => {
                 const isSelected =

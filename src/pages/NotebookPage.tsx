@@ -37,6 +37,84 @@ const MOBILE_TABS: { id: MobileTab; label: string; icon: React.ElementType }[] =
   { id: "studio",  label: "Studio",  icon: Sparkles      },
 ];
 
+// ── Notebook onboarding progress steps ───────────────────────────────────────
+function NotebookProgressSteps({
+  notebookId,
+  hasSource,
+  hasChat,
+  hasOutput,
+}: {
+  notebookId: string;
+  hasSource: boolean;
+  hasChat: boolean;
+  hasOutput: boolean;
+}) {
+  const [visible, setVisible] = useState(
+    () => !localStorage.getItem(`studyai_nb_graduated_${notebookId}`)
+  );
+
+  useEffect(() => {
+    if (hasOutput && visible) {
+      localStorage.setItem(`studyai_nb_graduated_${notebookId}`, "1");
+      const t = setTimeout(() => setVisible(false), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [hasOutput, visible, notebookId]);
+
+  const steps: { label: string; done: boolean }[] = [
+    { label: "Add source", done: hasSource },
+    { label: "Chat with AI", done: hasChat },
+    { label: "Generate content", done: hasOutput },
+  ];
+
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.2 }}
+          className="overflow-hidden shrink-0"
+          style={{ borderBottom: "0.5px solid var(--border)" }}
+        >
+          <div className="flex items-center gap-4 px-4 py-2" style={{ background: "var(--surface-1)" }}>
+            {steps.map(({ label, done }, idx) => (
+              <div key={idx} className="flex items-center gap-1.5">
+                {idx > 0 && (
+                  <div
+                    className="w-5 h-px mx-0.5"
+                    style={{ background: done ? "rgba(56,224,195,0.4)" : "var(--border)" }}
+                  />
+                )}
+                <span
+                  className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
+                  style={{
+                    background: done ? "rgba(56,224,195,0.15)" : "var(--surface-2)",
+                    color: done ? "#38E0C3" : "var(--text-muted)",
+                    border: `0.5px solid ${done ? "rgba(56,224,195,0.3)" : "var(--border)"}`,
+                  }}
+                >
+                  {done ? "✓" : idx + 1}
+                </span>
+                <span
+                  className="text-[10px] hidden sm:block"
+                  style={{ color: done ? "#38E0C3" : "var(--text-muted)" }}
+                >
+                  {label}
+                </span>
+              </div>
+            ))}
+            <span className="ml-auto text-[10px]" style={{ color: "var(--text-muted)" }}>
+              {steps.filter((s) => s.done).length}/3
+            </span>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 // ── sessionStorage helpers ───────────────────────────────────────────────────
 function ssGet(key: string): string | null {
   try { return sessionStorage.getItem(key); } catch { return null; }
@@ -99,7 +177,9 @@ export default function NotebookPage() {
   const {
     activeNotebook,
     setActiveNotebook,
+    sources,
     aiOutputs,
+    chatMessages,
     isGenerating,
     generatingType,
     setActiveOutput,
@@ -138,9 +218,11 @@ export default function NotebookPage() {
   }, [aiOutputs]);
 
   const runGenerate = useCallback(async (type: AIOutputType, options?: GenerationOptions) => {
+    const wasFirst = aiOutputs.length === 0;
     try {
       await generate(type, options);
-      toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} generated!`);
+      const label = type.charAt(0).toUpperCase() + type.slice(1);
+      toast.success(wasFirst ? `${label} ready! 🎉 Explore Studio to view it.` : `${label} generated!`);
     } catch (err: unknown) {
       const msg = (err as Error).message ?? "Generation failed";
       if (msg === "__RATE_LIMITED__") {
@@ -149,7 +231,7 @@ export default function NotebookPage() {
         toast.error(msg);
       }
     }
-  }, [generate]);
+  }, [generate, aiOutputs.length]);
 
   const handleGenerate = useCallback((type: AIOutputType) => {
     if (type === "quiz" || type === "flashcards") {
@@ -246,7 +328,7 @@ export default function NotebookPage() {
                 className="absolute bottom-0 left-0 right-0 h-[2px] bg-[var(--brand-primary)] rounded-full"
               />
             )}
-            {id === "studio" && isGenerating && (
+            {id === "studio" && (isGenerating || (sources.length > 0 && aiOutputs.length === 0)) && (
               <span className="absolute top-1.5 right-[calc(50%-14px)] w-1.5 h-1.5 rounded-full bg-[var(--brand-primary)] animate-pulse" />
             )}
           </button>
@@ -263,6 +345,16 @@ export default function NotebookPage() {
           </button>
         )}
       </div>
+
+      {/* ── Onboarding progress steps (both mobile + desktop) ─────────────── */}
+      {notebookId && (
+        <NotebookProgressSteps
+          notebookId={notebookId}
+          hasSource={sources.length > 0}
+          hasChat={chatMessages.length > 0}
+          hasOutput={aiOutputs.length > 0}
+        />
+      )}
 
       {/* ── Mobile / tablet: tab panels ───────────────────────────────────── */}
       <div className="md:hidden flex-1 overflow-hidden">
