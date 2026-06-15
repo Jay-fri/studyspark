@@ -42,15 +42,6 @@ export default defineConfig({
           { src: "pwa-512x512.png", sizes: "512x512", type: "image/png", purpose: "any"      },
           { src: "pwa-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
-        screenshots: [
-          {
-            src:         "pwa-512x512.png",
-            sizes:       "512x512",
-            type:        "image/png",
-            form_factor: "narrow",
-            label:       "StudyLM — AI Study Assistant",
-          },
-        ],
       },
       injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,jpg,jpeg}"],
