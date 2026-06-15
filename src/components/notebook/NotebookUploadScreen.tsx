@@ -8,7 +8,6 @@ import {
 } from "@/lib/icons";
 import { useUploadSource } from "@/hooks/useUploadSource";
 import { UploadModal } from "./UploadModal";
-import { cn } from "@/lib/utils";
 
 const ACCEPTED_TYPES: Record<string, string[]> = {
   "application/pdf": [".pdf"],
