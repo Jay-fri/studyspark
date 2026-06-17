@@ -236,6 +236,7 @@ export default function DashboardPage() {
   }, [allFlashcardOutputs, getDueCards]);
 
   const recentNotebooks = useMemo(() => notebooks.slice(0, 3), [notebooks]);
+  const isNewUser = !notebooksLoading && notebooks.length === 0;
 
   // Summary text for subtitle
   const summaryParts: string[] = [];
@@ -375,6 +376,92 @@ export default function DashboardPage() {
             </Link>
           )}
         </motion.div>
+
+        {/* ── Onboarding hero (zero-notebook state) ── */}
+        {isNewUser && (
+          <motion.div variants={fadeUp} className="mb-5">
+            <div
+              className="rounded-2xl p-6 sm:p-8"
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "0.5px solid rgba(56,224,195,0.18)",
+                backdropFilter: "blur(16px)",
+              }}
+            >
+              <p
+                className="text-[11px] font-semibold uppercase mb-4"
+                style={{ letterSpacing: "0.06em", color: "rgba(56,224,195,0.65)" }}
+              >
+                Get started
+              </p>
+              <h2
+                className="text-[20px] font-display font-medium mb-1"
+                style={{ color: "var(--text-primary)", letterSpacing: "-0.025em" }}
+              >
+                Create your first notebook
+              </h2>
+              <p className="text-[13px] mb-7" style={{ color: "var(--text-muted)" }}>
+                StudyAI turns your notes and documents into summaries, quizzes, and flashcards.
+              </p>
+
+              {/* Steps */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+                {[
+                  {
+                    n: "1",
+                    emoji: "📚",
+                    title: "Create a notebook",
+                    desc: "Organise your material by subject or topic",
+                  },
+                  {
+                    n: "2",
+                    emoji: "📄",
+                    title: "Upload your sources",
+                    desc: "Add PDFs, paste text, or type lecture notes",
+                  },
+                  {
+                    n: "3",
+                    emoji: "✨",
+                    title: "Generate study content",
+                    desc: "Summaries, quizzes, flashcards and more",
+                  },
+                ].map((step) => (
+                  <div key={step.n} className="flex items-start gap-3.5">
+                    <span
+                      className="text-[11px] font-bold w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                      style={{
+                        background: "rgba(56,224,195,0.1)",
+                        border: "0.5px solid rgba(56,224,195,0.28)",
+                        color: "#38E0C3",
+                      }}
+                    >
+                      {step.n}
+                    </span>
+                    <div>
+                      <p className="text-[13px] font-medium mb-0.5" style={{ color: "var(--text-primary)" }}>
+                        {step.emoji} {step.title}
+                      </p>
+                      <p className="text-[12px]" style={{ color: "var(--text-muted)" }}>
+                        {step.desc}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Link
+                to="/notebooks?create=1"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
+                style={{ background: "#38E0C3", color: "#0a1628" }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "#2ccdb5"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "#38E0C3"; }}
+              >
+                Create your first notebook
+                <span aria-hidden>→</span>
+              </Link>
+            </div>
+          </motion.div>
+        )}
 
         {/* ── Token card ── */}
         <motion.div variants={fadeUp} className="mb-3">
@@ -547,8 +634,8 @@ export default function DashboardPage() {
           </motion.div>
         )}
 
-        {/* ── Recent notebooks ── */}
-        <motion.div variants={fadeUp} className="mb-6">
+        {/* ── Recent notebooks (hidden for new users — onboarding card handles it) ── */}
+        {!isNewUser && <motion.div variants={fadeUp} className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <p
               className="text-[10.5px] font-semibold uppercase tracking-widest"
@@ -623,7 +710,7 @@ export default function DashboardPage() {
               </button>
             </div>
           )}
-        </motion.div>
+        </motion.div>}
 
         {/* ── Recent activity ── */}
         {activityLoading && (
