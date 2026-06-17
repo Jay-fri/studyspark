@@ -305,7 +305,7 @@ export default function DashboardPage() {
           {/* Primary pill */}
           <Link
             id="tour-new-notebook-btn"
-            to="/notebooks"
+            to="/notebooks?create=1"
             className="flex items-center gap-2 px-4 py-2 rounded-[9px] text-sm font-medium transition-all hover:-translate-y-px"
             style={{
               background: "rgba(56,224,195,0.1)",

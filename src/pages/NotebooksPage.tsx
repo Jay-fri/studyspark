@@ -803,7 +803,7 @@ export default function NotebooksPage() {
               {filtered.map((nb, idx) => (
                 <GridCard key={nb.id} nb={nb} menuOpen={activeMenuId === nb.id} onMenuToggle={() => menuToggle(nb.id)}
                   onRename={() => { setRenamingNb(nb); setActiveMenuId(null); }}
-                  onDuplicate={() => { duplicateNotebook.mutate(nb); toast.success("Notebook duplicated!"); setActiveMenuId(null); }}
+                  onDuplicate={() => { duplicateNotebook.mutateAsync(nb).then(copy => { if (copy?.id) navigate(`/notebooks/${copy.id}`); }); toast.success("Notebook duplicated!"); setActiveMenuId(null); }}
                   onDelete={() => { handleDelete(nb); setActiveMenuId(null); }}
                   tourId={idx === 0 ? "tour-notebook-demo-card" : undefined}
                   onTourClick={idx === 0 ? () => { if (activeTour.isActive) setTimeout(activeTour.moveNext, 1100); } : undefined}
@@ -831,7 +831,7 @@ export default function NotebooksPage() {
               {filtered.map(nb => (
                 <ListRow key={nb.id} nb={nb} menuOpen={activeMenuId === nb.id} onMenuToggle={() => menuToggle(nb.id)}
                   onRename={() => { setRenamingNb(nb); setActiveMenuId(null); }}
-                  onDuplicate={() => { duplicateNotebook.mutate(nb); toast.success("Notebook duplicated!"); setActiveMenuId(null); }}
+                  onDuplicate={() => { duplicateNotebook.mutateAsync(nb).then(copy => { if (copy?.id) navigate(`/notebooks/${copy.id}`); }); toast.success("Notebook duplicated!"); setActiveMenuId(null); }}
                   onDelete={() => { handleDelete(nb); setActiveMenuId(null); }}
                 />
               ))}
