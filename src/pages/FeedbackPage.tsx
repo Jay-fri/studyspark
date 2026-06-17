@@ -60,7 +60,7 @@ export default function FeedbackPage() {
             Feedback & Ideas
           </h1>
           <p className="text-sm text-[var(--text-muted)] mt-1.5">
-            Help us improve StudyAI. Every message is read and considered.
+            Help us improve StudyLM. Every message is read and considered.
           </p>
         </div>
 

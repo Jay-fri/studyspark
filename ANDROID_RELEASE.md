@@ -1,68 +1,107 @@
-# Building a signed release APK
+# Releasing the StudyLM Android APK
 
-## Prerequisites
+## One-time setup (do this before your first release)
 
-- Android Studio installed (https://developer.android.com/studio)
-- JDK 17+ on PATH
-- A keystore file (create once, keep forever — see step 3)
+### 1. Install Android Studio + JDK
 
-## Steps
+Download from https://developer.android.com/studio — it bundles JDK 17.
 
-1. **Sync the web build into the native shell**
-   ```bash
-   npm run android:sync
-   ```
+### 2. Create the Supabase `releases` storage bucket
 
-2. **Open Android Studio**
-   ```bash
-   npm run android:open
-   ```
+Run this in the Supabase dashboard SQL editor
+(https://supabase.com/dashboard/project/yguqquyvuflcmlhwdzal/sql):
 
-3. **Generate a signed APK**
+Or push the migration:
+```bash
+supabase db push
+```
 
-   In Android Studio: **Build > Generate Signed Bundle / APK**
+The migration is already written at `supabase/migrations/20240030_releases_bucket.sql`.
+It creates a public bucket that anyone can download from but only admins can upload to.
 
-   Choose **APK** (not AAB — we need direct APK for sideload distribution).
+### 3. Create your signing keystore (first release only)
 
-   **First release only:** Create a new keystore:
-   - Build > Generate Signed Bundle/APK > Create new...
-   - Choose a path, set a strong password
-   - **Save this keystore file and password somewhere safe (password manager)**
-   - Every future update must be signed with the SAME keystore or users cannot update without uninstalling first
+In Android Studio: **Build → Generate Signed Bundle / APK → Create new...**
 
-   Select the **release** build variant and click Finish.
+- Choose a file path (e.g. `~/studylm-release.keystore`)
+- Set a strong password
+- **Back up this file and password in your password manager — forever.**
+  Every future update must be signed with the same keystore or users must uninstall first.
 
-4. **Locate the output APK**
+---
 
-   ```
-   android/app/release/app-release.apk
-   ```
+## Every release
 
-5. **Rename and upload**
+### Step 1 — Sync the web build
 
-   Rename to `studyai-v[version].apk` (e.g. `studyai-v1.0.0.apk`)
+```bash
+npm run android:sync
+```
 
-   Upload to the Supabase Storage `releases` bucket.
+### Step 2 — Open Android Studio
 
-6. **Update the download link**
+```bash
+npm run android:open
+```
 
-   Update the APK download URL and version label in `GetAppPage.tsx` once it exists.
+### Step 3 — Build the signed APK
+
+**Build → Generate Signed Bundle / APK → APK → release**
+
+Select your keystore, enter password, pick **release** build variant → Finish.
+
+Output: `android/app/release/app-release.apk`
+
+### Step 4 — Upload to Supabase Storage
+
+In the Supabase dashboard → Storage → releases bucket, upload the file named:
+
+```
+studylm-v1.0.0.apk   ← increment version each release
+```
+
+Public URL (already wired into the download page):
+```
+https://yguqquyvuflcmlhwdzal.supabase.co/storage/v1/object/public/releases/studylm-v1.0.0.apk
+```
+
+### Step 5 — Update the download page
+
+Edit the three constants at the top of `src/pages/GetAppPage.tsx`:
+
+```typescript
+const APK_URL     = 'https://yguqquyvuflcmlhwdzal.supabase.co/storage/v1/object/public/releases/studylm-v1.0.1.apk';
+const APK_VERSION = '1.0.1';
+const APK_SIZE    = '~25 MB';  // check actual file size after build
+```
+
+### Step 6 — Deploy
+
+```bash
+npm run build
+```
+
+Then deploy your hosting (Cloudflare Pages / Vercel / etc.) — the download page at `/download` now serves the new version.
+
+---
 
 ## Live reload during development
 
-For fast iteration on a connected Android device or emulator (no full APK rebuild needed):
+Test on a connected Android device without building a full APK:
 
 ```bash
 npx cap run android -l --external
 ```
 
-This runs the app pointing at the Vite dev server so changes hot-reload inside the native shell.
+Changes hot-reload inside the native shell — much faster than a full build cycle.
+
+---
 
 ## Version bumping
 
-Before each release, update `version` in `package.json` and the `android/app/build.gradle` fields:
+Before each release update `android/app/build.gradle`:
 
 ```groovy
-versionCode X       // increment by 1 each release
-versionName "X.Y.Z" // semver string shown to users
+versionCode X        // increment by 1 each release (integer)
+versionName "X.Y.Z"  // semver string shown in Settings → About
 ```

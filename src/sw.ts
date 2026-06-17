@@ -70,7 +70,7 @@ registerRoute(
 // ── Push notification handler ─────────────────────────────────────────────────
 self.addEventListener("push", (event) => {
   const data = event.data?.json() ?? {};
-  const title = (data.title as string) ?? "StudyAI";
+  const title = (data.title as string) ?? "StudyLM";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const options: any = {
     body: (data.body as string) ?? "",

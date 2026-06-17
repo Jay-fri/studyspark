@@ -306,7 +306,7 @@ export function useTour() {
         // ── 1. Welcome ───────────────────────────────────────────────────────
         {
           popover: {
-            title: "Welcome to StudyAI 👋",
+            title: "Welcome to StudyLM 👋",
             description:
               'Your AI-powered study companion. Tap "Got it →" for a quick tour.',
           },
@@ -429,7 +429,7 @@ export function useTour() {
           popover: {
             title: "You're all set 🎉",
             description:
-              "Upload a lecture note or PDF to your notebook and let StudyAI turn it into quizzes, flashcards, and summaries.",
+              "Upload a lecture note or PDF to your notebook and let StudyLM turn it into quizzes, flashcards, and summaries.",
           },
         },
       ],

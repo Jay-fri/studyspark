@@ -37,6 +37,7 @@ const TicTacToePage     = lazy(() => import("@/pages/TicTacToePage"));
 const NotFoundPage           = lazy(() => import("@/pages/NotFoundPage"));
 const PaymentCallbackPage    = lazy(() => import("@/pages/PaymentCallbackPage"));
 const BannedPage             = lazy(() => import("@/pages/BannedPage"));
+const GetAppPage             = lazy(() => import("@/pages/GetAppPage"));
 
 function PageLoader() {
   return (
@@ -65,6 +66,7 @@ export default function App() {
             <Routes>
               {/* Public */}
               <Route path="/"                  element={<LandingPage />} />
+              <Route path="/download"           element={<GetAppPage />} />
               <Route path="/auth"              element={<AuthPage />} />
               <Route path="/banned"            element={<BannedPage />} />
               <Route path="/payment-callback"  element={<PaymentCallbackPage />} />

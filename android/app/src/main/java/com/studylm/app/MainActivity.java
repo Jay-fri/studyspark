@@ -1,4 +1,4 @@
-package com.studyai.app;
+package com.studylm.app;
 
 import com.getcapacitor.BridgeActivity;
 

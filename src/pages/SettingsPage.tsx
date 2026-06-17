@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useTour } from "@/hooks/useTour";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { motion } from "framer-motion";
@@ -559,6 +559,31 @@ function DataTab() {
 
   return (
     <div className="space-y-4">
+      <Section title="Get the App">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-[var(--text-secondary)] mb-1">
+              Install StudyLM on your phone
+            </p>
+            <p className="text-xs text-[var(--text-muted)]">
+              Android APK or iOS home screen — we'll guide you through it
+            </p>
+          </div>
+          <Link
+            to="/download"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium shrink-0 ml-4 transition-colors"
+            style={{
+              background: "rgba(56,224,195,0.08)",
+              border: "0.5px solid rgba(56,224,195,0.20)",
+              color: "#38E0C3",
+            }}
+          >
+            <Download className="w-3.5 h-3.5" />
+            Get app
+          </Link>
+        </div>
+      </Section>
+
       <Section title="Export Your Data">
         <p className="text-sm text-[var(--text-secondary)] mb-4">
           Download all your notebooks, AI outputs, and sources as a JSON file.

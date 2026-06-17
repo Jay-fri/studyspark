@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.studyai.app',
-  appName: 'StudyAI',
+  appId: 'com.studylm.app',
+  appName: 'StudyLM',
   webDir: 'dist',
 
   backgroundColor: '#0a1628',

@@ -401,7 +401,7 @@ export default function DashboardPage() {
                 Create your first notebook
               </h2>
               <p className="text-[13px] mb-7" style={{ color: "var(--text-muted)" }}>
-                StudyAI turns your notes and documents into summaries, quizzes, and flashcards.
+                StudyLM turns your notes and documents into summaries, quizzes, and flashcards.
               </p>
 
               {/* Steps */}

@@ -209,7 +209,7 @@ export function NotebookUploadScreen({ notebookId, notebookTitle }: Props) {
             Upload your material,<br />we'll build your study kit.
           </h1>
           <p className="text-[12px] mb-6 leading-relaxed" style={{ color: "rgba(255,255,255,0.32)", maxWidth: 360 }}>
-            Drop anything — PDF, DOCX, or paste your notes. StudyAI reads it and generates everything you need to ace your exams.
+            Drop anything — PDF, DOCX, or paste your notes. StudyLM reads it and generates everything you need to ace your exams.
           </p>
 
           {/* Upload zone */}
