@@ -239,8 +239,11 @@ export function Sidebar() {
 
       {/* ── User ──────────────────────────────────────────────────────────── */}
       <div
-        className="shrink-0 px-3 pb-4"
-        style={{ borderTop: "0.5px solid var(--border-subtle)" }}
+        className="shrink-0 px-3"
+        style={{
+          borderTop: "0.5px solid var(--border-subtle)",
+          paddingBottom: "max(16px, env(safe-area-inset-bottom, 0px))",
+        }}
       >
         {sidebarCollapsed ? (
           <button

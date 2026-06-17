@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Zap, Check, Loader2,
@@ -10,6 +10,8 @@ import { useAuthStore }    from "@/stores/authStore";
 import { TOKEN_PACKAGES }  from "@/types";
 import { Portal }          from "@/components/shared/Portal";
 import { cn }              from "@/lib/utils";
+import { App }             from "@capacitor/app";
+import { isNative }        from "@/lib/capacitor";
 
 // How many of each action a package unlocks (based on TOKEN_COSTS)
 const PACKAGE_VALUE: Record<string, { label: string; count: number }[]> = {
@@ -31,6 +33,12 @@ export function PaymentModal() {
   const [selected, setSelected] = useState(1);
 
   const close = () => { if (!isLoading) setPaymentModalOpen(false); };
+
+  useEffect(() => {
+    if (!isNative || !paymentModalOpen) return;
+    const listener = App.addListener('backButton', close);
+    return () => { listener.then(l => l.remove()); };
+  }, [paymentModalOpen]);
 
   const handlePurchase = async () => {
     const pkg = TOKEN_PACKAGES[selected];

@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Safe area (Android notch / iOS home bar) ───────────────────────── */
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.app-top-padding {
+  padding-top: max(16px, var(--safe-area-top));
+}
+
+.bottom-nav {
+  padding-bottom: max(16px, var(--safe-area-bottom));
+}
+
 /* ─── StudyLM Design System v2 ──────────────────────────────────────── */
 @layer base {
   /* ── Light mode (default) ─────────────────────────────────────────── */

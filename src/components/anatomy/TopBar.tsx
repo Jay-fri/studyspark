@@ -27,6 +27,7 @@ export function TopBar({
       background: 'rgba(10,10,15,0.85)',
       backdropFilter: 'blur(12px)',
       borderBottom: '0.5px solid rgba(255,255,255,0.08)',
+      paddingTop: 'env(safe-area-inset-top, 0px)',
     }}>
       {/* Main row */}
       <div style={{

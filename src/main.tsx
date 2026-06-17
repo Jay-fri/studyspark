@@ -4,8 +4,9 @@ import "./index.css";
 import "driver.js/dist/driver.css";
 import App from "./App";
 import { registerSW } from "virtual:pwa-register";
+import { initNativeApp } from "@/lib/capacitor";
 
-// Register service worker
+// Register service worker (PWA path — no-op in native WebView)
 registerSW({
   immediate: true,
   onRegistered(r) {
@@ -16,8 +17,10 @@ registerSW({
   },
 });
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>
-);
+initNativeApp().then(() => {
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <App />
+    </StrictMode>
+  );
+});

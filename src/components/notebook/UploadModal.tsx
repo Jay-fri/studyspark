@@ -1,10 +1,12 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { motion } from "framer-motion";
 import { X, Upload, FileText, Type, CheckCircle, AlertCircle, Loader2 } from "@/lib/icons";
 import { useUploadSource, type UploadProgress } from "@/hooks/useUploadSource";
 import { Portal } from "@/components/shared/Portal";
 import { cn } from "@/lib/utils";
+import { App } from "@capacitor/app";
+import { isNative } from "@/lib/capacitor";
 
 function getRejectionReason(errors: { code: string; message: string }[]): string {
   for (const e of errors) {
@@ -69,6 +71,12 @@ function ProgressBar({ p }: { p: UploadProgress }) {
 
 export function UploadModal({ notebookId, onClose, onDone }: Props) {
   const [tab, setTab] = useState<"file" | "text">("file");
+
+  useEffect(() => {
+    if (!isNative) return;
+    const listener = App.addListener('backButton', onClose);
+    return () => { listener.then(l => l.remove()); };
+  }, [onClose]);
   const [pasteTitle, setPasteTitle] = useState("");
   const [pasteText, setPasteText]   = useState("");
   const [submitting, setSubmitting] = useState(false);

@@ -111,11 +111,13 @@ export function Navbar() {
     <>
       {/* Top Bar */}
       <header
-        className="sticky top-0 z-30 flex items-center gap-3 h-14 px-4 border-b border-border"
+        className="sticky top-0 z-30 flex items-end gap-3 min-h-14 px-4 border-b border-border"
         style={{
           background: "var(--surface-0)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
+          paddingTop: "max(0px, env(safe-area-inset-top, 0px))",
+          paddingBottom: "12px",
         }}
       >
         {/* Hamburger (mobile) — animates to × when drawer is open */}
@@ -388,7 +390,7 @@ export function Navbar() {
                 key="mob-drawer-backdrop"
                 className="fixed left-0 right-0 bottom-0 z-[150]"
                 style={{
-                  top: "56px",
+                  top: "calc(56px + env(safe-area-inset-top, 0px))",
                   background: "rgba(4,10,20,0.55)",
                   backdropFilter: "blur(4px)",
                   WebkitBackdropFilter: "blur(4px)",
@@ -405,7 +407,7 @@ export function Navbar() {
                 key="mob-drawer-panel"
                 className="fixed z-[151] flex flex-col overflow-hidden"
                 style={{
-                  top: "60px",
+                  top: "calc(60px + env(safe-area-inset-top, 0px))",
                   left: "12px",
                   bottom: "12px",
                   width: "268px",

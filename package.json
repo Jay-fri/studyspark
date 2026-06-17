@@ -7,12 +7,22 @@
     "dev": "vite --host",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:run": "npm run build && npx cap run android"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",
+    "@capacitor/app": "^8.1.0",
     "@capacitor/cli": "^8.4.0",
     "@capacitor/core": "^8.4.0",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/keyboard": "^8.0.5",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
     "@hugeicons/core-free-icons": "^4.2.0",
     "@hugeicons/react": "^1.1.6",
     "@radix-ui/react-slot": "^1.2.5",
@@ -54,6 +64,7 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@types/node": "^22.10.5",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",

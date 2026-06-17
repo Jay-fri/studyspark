@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Download, X, Share, MoreVertical } from "@/lib/icons";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
+import { isNative } from "@/lib/capacitor";
 
 function IOSInstructions({ browser, onDone }: { browser: "safari" | "chrome" | "other"; onDone: () => void }) {
   const steps =
@@ -87,6 +88,8 @@ function IOSInstructions({ browser, onDone }: { browser: "safari" | "chrome" | "
 
 export function PWAPrompt() {
   const { showBanner, install, dismiss, isIOS, isSafari } = usePWAInstall();
+
+  if (isNative) return null;
   const [showIOSGuide, setShowIOSGuide] = useState(false);
 
   const handleInstallClick = () => {

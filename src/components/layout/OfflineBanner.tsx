@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { WifiOff } from "@/lib/icons";
+import { Network } from "@capacitor/network";
+import { isNative } from "@/lib/capacitor";
 
 type NetStatus = "offline" | "slow" | "online";
 
-function getNetStatus(): NetStatus {
+function getWebNetStatus(): NetStatus {
   if (!navigator.onLine) return "offline";
   const conn = (navigator as unknown as { connection?: { effectiveType?: string } }).connection;
   if (conn?.effectiveType === "slow-2g" || conn?.effectiveType === "2g") return "slow";
@@ -12,19 +14,30 @@ function getNetStatus(): NetStatus {
 }
 
 export function OfflineBanner() {
-  const [status, setStatus] = useState<NetStatus>(getNetStatus);
+  const [status, setStatus] = useState<NetStatus>("online");
 
   useEffect(() => {
-    const update = () => setStatus(getNetStatus());
-    window.addEventListener("offline", update);
-    window.addEventListener("online",  update);
-    const conn = (navigator as unknown as { connection?: EventTarget }).connection;
-    conn?.addEventListener("change", update);
-    return () => {
-      window.removeEventListener("offline", update);
-      window.removeEventListener("online",  update);
-      conn?.removeEventListener("change", update);
-    };
+    if (isNative) {
+      Network.getStatus().then(s => setStatus(s.connected ? "online" : "offline"));
+      const listenerPromise = Network.addListener("networkStatusChange", s =>
+        setStatus(s.connected ? "online" : "offline")
+      );
+      return () => {
+        listenerPromise.then(l => l.remove());
+      };
+    } else {
+      setStatus(getWebNetStatus());
+      const update = () => setStatus(getWebNetStatus());
+      window.addEventListener("offline", update);
+      window.addEventListener("online", update);
+      const conn = (navigator as unknown as { connection?: EventTarget }).connection;
+      conn?.addEventListener("change", update);
+      return () => {
+        window.removeEventListener("offline", update);
+        window.removeEventListener("online", update);
+        conn?.removeEventListener("change", update);
+      };
+    }
   }, []);
 
   const visible = status !== "online";
