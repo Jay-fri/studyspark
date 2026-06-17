@@ -12,6 +12,8 @@ import { Navbar } from "./Navbar";
 import { MobileNav } from "./MobileNav";
 import { OfflineBanner } from "./OfflineBanner";
 import { UpdateBanner } from "@/components/UpdateBanner";
+import { registerPush } from "@/lib/pushNotifications";
+import { scheduleStreakReminder } from "@/lib/localNotifications";
 import { PWAPrompt } from "./PWAPrompt";
 import { PushNotificationPrompt } from "@/components/PushNotificationPrompt";
 import { TokenBanner } from "@/components/payment/TokenBanner";
@@ -265,6 +267,17 @@ export function AppShell() {
     const timer = setTimeout(() => startTour(), 1200);
     return () => clearTimeout(timer);
   }, [profile]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Native Android notification setup — runs once per session after auth resolves.
+  // Push permission is only requested after the onboarding tour is done so the
+  // system dialog has context. Streak reminder is safe to schedule unconditionally.
+  useEffect(() => {
+    if (!profile?.id) return;
+    scheduleStreakReminder();
+    if (localStorage.getItem("studyai_tour_complete")) {
+      registerPush(profile.id);
+    }
+  }, [profile?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // /notebooks/:id pages manage their own layout (tab bar replaces navbar on mobile)
   const segments = location.pathname.split("/").filter(Boolean);

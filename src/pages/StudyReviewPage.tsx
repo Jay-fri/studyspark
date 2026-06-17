@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useSRS } from "@/hooks/useSRS";
 import type { AIOutput, Flashcard } from "@/types";
 import { NotebookIcon, DEFAULT_NOTEBOOK_ICON } from "@/lib/notebookIcons";
+import { scheduleFlashcardReminder } from "@/lib/localNotifications";
 
 interface DueCard {
   card:           Flashcard;
@@ -51,6 +52,13 @@ export default function StudyReviewPage() {
     }
     return result;
   }, [flashcardOutputs, getDueCards]);
+
+  // Schedule a reminder 4 hours from now if there are still cards due
+  useEffect(() => {
+    if (!isLoading && dueCards.length > 0) {
+      scheduleFlashcardReminder(dueCards.length);
+    }
+  }, [isLoading, dueCards.length]);
 
   const [index, setIndex]       = useState(0);
   const [flipped, setFlipped]   = useState(false);

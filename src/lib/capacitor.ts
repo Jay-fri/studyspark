@@ -3,6 +3,7 @@ import { SplashScreen } from '@capacitor/splash-screen';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { App } from '@capacitor/app';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { createNotificationChannels } from './localNotifications';
 
 export const isNative = Capacitor.isNativePlatform();
 export const platform = Capacitor.getPlatform(); // 'android' | 'ios' | 'web'
@@ -14,6 +15,8 @@ export async function initNativeApp() {
   await StatusBar.setBackgroundColor({ color: '#0a1628' });
 
   await SplashScreen.hide();
+
+  await createNotificationChannels();
 
   App.addListener('backButton', ({ canGoBack }) => {
     if (canGoBack) {

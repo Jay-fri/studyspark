@@ -147,6 +147,15 @@ function GrantTokensModal({ user, onClose }: { user: Profile; onClose: () => voi
     });
     if (error) { toast.error(error.message); return; }
     toast.success(`${n.toLocaleString()} tokens granted to ${user.full_name ?? user.email}`);
+    supabase.functions.invoke('send-notification', {
+      body: {
+        user_id: user.id,
+        title: 'Tokens added',
+        body: `${n.toLocaleString()} tokens were added to your account`,
+        type: 'token_granted',
+        route: '/profile',
+      },
+    });
     qc.invalidateQueries({ queryKey: ["admin-users"] });
     onClose();
   };

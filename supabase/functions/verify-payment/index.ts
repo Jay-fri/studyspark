@@ -121,6 +121,22 @@ Deno.serve(async (req) => {
       { onConflict: "flutterwave_ref" }
     );
 
+    // 7. Fire push notification — fire-and-forget, never block the payment response
+    fetch(`${SUPABASE_URL}/functions/v1/send-notification`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        user_id,
+        title: 'Payment successful',
+        body: `${tokens.toLocaleString()} tokens added to your account`,
+        type: 'payment_success',
+        route: '/payment',
+      }),
+    }).catch((e) => console.error('[verify-payment] notification error:', e));
+
     console.log("[verify-payment] done — credited", tokens, "tokens, new balance:", newBalance);
     return json({ success: true, new_balance: newBalance });
 
