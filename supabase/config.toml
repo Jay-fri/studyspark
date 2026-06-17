@@ -1,0 +1,2 @@
+[functions.send-reengagement]
+verify_jwt = false

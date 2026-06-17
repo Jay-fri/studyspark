@@ -108,6 +108,7 @@ function Navbar() {
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
         borderBottom: "0.5px solid rgba(255,255,255,0.07)",
+        paddingTop: "env(safe-area-inset-top, 0px)",
       }}
     >
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -157,7 +158,7 @@ function Navbar() {
 function Hero() {
   const navigate = useNavigate();
   return (
-    <section className="relative pt-40 pb-28 px-6 overflow-hidden">
+    <section className="relative pb-28 px-6 overflow-hidden" style={{ paddingTop: "calc(10rem + env(safe-area-inset-top, 0px))" }}>
       {/* Orbs */}
       <div className="absolute inset-0 pointer-events-none -z-10">
         <div className="absolute rounded-full" style={{ width: 500, height: 500, background: "rgba(56,224,195,0.09)", filter: "blur(90px)", top: -160, left: -100 }} />
