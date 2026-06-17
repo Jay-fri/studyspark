@@ -11,6 +11,7 @@ import { Sidebar } from "./Sidebar";
 import { Navbar } from "./Navbar";
 import { MobileNav } from "./MobileNav";
 import { OfflineBanner } from "./OfflineBanner";
+import { UpdateBanner } from "@/components/UpdateBanner";
 import { PWAPrompt } from "./PWAPrompt";
 import { PushNotificationPrompt } from "@/components/PushNotificationPrompt";
 import { TokenBanner } from "@/components/payment/TokenBanner";
@@ -365,7 +366,8 @@ export function AppShell() {
       <div
         className="relative flex flex-col flex-1 min-w-0 overflow-x-hidden"
         style={{ zIndex: 1 }}>
-        {/* Network/token banners */}
+        {/* Network/token/update banners */}
+        <UpdateBanner />
         <OfflineBanner />
         <TokenBanner />
 

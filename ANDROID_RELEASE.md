@@ -105,3 +105,36 @@ Before each release update `android/app/build.gradle`:
 versionCode X        // increment by 1 each release (integer)
 versionName "X.Y.Z"  // semver string shown in Settings → About
 ```
+
+---
+
+## Shipping an update (in-app update checker)
+
+Installed apps check `app_releases` in Supabase on every launch and show a
+download banner when a newer version is available. To publish an update:
+
+1. Bump `APP_VERSION` in `src/lib/constants.ts`
+2. Bump `versionName` (and `versionCode +1`) in `android/app/build.gradle`
+3. `npm run android:sync`
+4. Generate signed APK in Android Studio (same keystore, always)
+5. Rename to `study-spark-v[new-version].apk`
+6. Upload to Supabase Storage → **releases** bucket
+7. Insert a new row in the `app_releases` table:
+
+```sql
+insert into public.app_releases (platform, version, apk_url, release_notes)
+values (
+  'android',
+  '1.0.1',
+  'https://yguqquyvuflcmlhwdzal.supabase.co/storage/v1/object/public/releases/study-spark-v1.0.1.apk',
+  'What changed in this release'
+);
+```
+
+Existing installed apps will show the update banner on their next launch.
+No rebuild or redeployment needed for this step — the Supabase row is the
+only thing that triggers the banner.
+
+Set `is_mandatory = true` only for critical fixes (security issues, breaking
+API changes). Mandatory updates hide the dismiss button and block the UI
+until the user downloads the new APK.
