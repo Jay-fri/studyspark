@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { MintShimmerButton } from "@/components/ui/MintShimmerButton";
 import { useQuery } from "@tanstack/react-query";
+import { useNotebooks } from "@/hooks/useNotebook";
+import { NotebookCardSkeleton, ActivityRowSkeleton } from "@/components/ui/Skeleton";
 import { format, formatDistanceToNow } from "date-fns";
 import { useSRS } from "@/hooks/useSRS";
 import { ChevronRight, Layers } from "@/lib/icons";
@@ -99,6 +101,7 @@ function TokenBar({ balance, max = 1000 }: { balance: number; max?: number }) {
 export default function DashboardPage() {
   const profile = useAuthStore((s) => s.profile);
   const notebooks = useNotebookStore((s) => s.notebooks);
+  const { isLoading: notebooksLoading } = useNotebooks();
   const { setPaymentModalOpen } = useUIStore();
   const { getDueCards } = useSRS();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -178,7 +181,7 @@ export default function DashboardPage() {
 
   const currentStreak = streakData?.current_streak ?? 0;
 
-  const { data: recentOutputs = [] } = useQuery<AIOutput[]>({
+  const { data: recentOutputs = [], isLoading: activityLoading } = useQuery<AIOutput[]>({
     queryKey: ["recent-outputs", userId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -560,14 +563,25 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          {recentNotebooks.length > 0 ? (
+          {notebooksLoading ? (
+            <>
+              {/* Desktop skeleton */}
+              <div className="hidden sm:grid grid-cols-3 gap-3">
+                {Array.from({ length: 3 }).map((_, i) => <NotebookCardSkeleton key={i} />)}
+              </div>
+              {/* Mobile skeleton */}
+              <div className="flex gap-3 overflow-x-auto scrollbar-none -mx-5 px-5 pb-2 sm:hidden">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <div key={i} className="shrink-0 w-40"><NotebookCardSkeleton /></div>
+                ))}
+              </div>
+            </>
+          ) : recentNotebooks.length > 0 ? (
             <>
               {/* Desktop grid */}
               <div className="hidden sm:grid grid-cols-3 gap-3">
                 {recentNotebooks.map((nb, i) => (
-                  <div
-                    key={nb.id}
-                    id={i === 0 ? "tour-notebook-card" : undefined}>
+                  <div key={nb.id} id={i === 0 ? "tour-notebook-card" : undefined}>
                     <NotebookCard nb={nb} />
                   </div>
                 ))}
@@ -576,9 +590,7 @@ export default function DashboardPage() {
               {/* Mobile horizontal scroll */}
               <div className="flex gap-3 overflow-x-auto scrollbar-none -mx-5 px-5 pb-2 sm:hidden">
                 {recentNotebooks.map((nb, i) => (
-                  <div
-                    key={nb.id}
-                    id={i === 0 ? "tour-notebook-card" : undefined}>
+                  <div key={nb.id} id={i === 0 ? "tour-notebook-card" : undefined}>
                     <NotebookCard nb={nb} mobile />
                   </div>
                 ))}
@@ -614,7 +626,19 @@ export default function DashboardPage() {
         </motion.div>
 
         {/* ── Recent activity ── */}
-        {recentOutputs.length > 0 && (
+        {activityLoading && (
+          <motion.div variants={fadeUp} className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[10.5px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+                Recent activity
+              </p>
+            </div>
+            <div className="rounded-2xl overflow-hidden" style={{ background: "var(--surface-1)", border: "0.5px solid var(--border)" }}>
+              {Array.from({ length: 4 }).map((_, i) => <ActivityRowSkeleton key={i} />)}
+            </div>
+          </motion.div>
+        )}
+        {!activityLoading && recentOutputs.length > 0 && (
           <motion.div variants={fadeUp} className="mb-6">
             <div className="flex items-center justify-between mb-3">
               <p

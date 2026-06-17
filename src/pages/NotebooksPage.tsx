@@ -4,9 +4,10 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { activeTour } from "@/hooks/useTour";
 import {
-  Plus, Loader2, X, Search,
-  Pencil, Copy, Trash2, LayoutGrid, List, ImagePlus,
+  Plus, X, Search,
+  Pencil, Copy, Trash2, LayoutGrid, List, ImagePlus, Loader2,
 } from "@/lib/icons";
+import { NotebookCardSkeleton } from "@/components/ui/Skeleton";
 import {
   NOTEBOOK_ICON_SET, NotebookIcon, DEFAULT_NOTEBOOK_ICON, isIconKey,
 } from "@/lib/notebookIcons";
@@ -660,6 +661,7 @@ export default function NotebooksPage() {
   const [searchParams] = useSearchParams();
   const [showCreate,   setShowCreate]   = useState(() => searchParams.get("create") === "1");
   const [renamingNb,   setRenamingNb]   = useState<Notebook | null>(null);
+  const [deletingNb,   setDeletingNb]   = useState<Notebook | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [search,       setSearch]       = useState("");
   const [sortBy,       setSortBy]       = useState<SortKey>("recent");
@@ -678,21 +680,7 @@ export default function NotebooksPage() {
     return list;
   }, [notebooks, search, sortBy]);
 
-  const handleDelete = (nb: Notebook) => {
-    toast(t => (
-      <div className="flex items-center gap-3">
-        <span className="text-sm">Delete &ldquo;{nb.title}&rdquo;?</span>
-        <button
-          onClick={() => { deleteNotebook.mutate(nb.id); toast.dismiss(t.id); }}
-          className="px-2.5 py-1 rounded-lg text-white text-xs font-semibold"
-          style={{ background: "var(--brand-danger)" }}
-        >Delete</button>
-        <button onClick={() => toast.dismiss(t.id)} className="text-xs" style={{ color: "var(--text-muted)" }}>
-          Cancel
-        </button>
-      </div>
-    ), { duration: 5000 });
-  };
+  const handleDelete = (nb: Notebook) => setDeletingNb(nb);
 
   const menuToggle = (id: string) => setActiveMenuId(prev => (prev === id ? null : id));
 
@@ -763,8 +751,10 @@ export default function NotebooksPage() {
       {/* Body */}
       <div className="px-4 sm:px-6 lg:px-8 py-6">
         {isLoading && (
-          <div className="flex justify-center py-24">
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#38E0C3" }} />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <NotebookCardSkeleton key={i} />
+            ))}
           </div>
         )}
 
@@ -804,7 +794,7 @@ export default function NotebooksPage() {
                 <GridCard key={nb.id} nb={nb} menuOpen={activeMenuId === nb.id} onMenuToggle={() => menuToggle(nb.id)}
                   onRename={() => { setRenamingNb(nb); setActiveMenuId(null); }}
                   onDuplicate={() => { duplicateNotebook.mutateAsync(nb).then(copy => { if (copy?.id) navigate(`/notebooks/${copy.id}`); }); toast.success("Notebook duplicated!"); setActiveMenuId(null); }}
-                  onDelete={() => { handleDelete(nb); setActiveMenuId(null); }}
+                  onDelete={() => handleDelete(nb)}
                   tourId={idx === 0 ? "tour-notebook-demo-card" : undefined}
                   onTourClick={idx === 0 ? () => { if (activeTour.isActive) setTimeout(activeTour.moveNext, 1100); } : undefined}
                 />
@@ -832,7 +822,7 @@ export default function NotebooksPage() {
                 <ListRow key={nb.id} nb={nb} menuOpen={activeMenuId === nb.id} onMenuToggle={() => menuToggle(nb.id)}
                   onRename={() => { setRenamingNb(nb); setActiveMenuId(null); }}
                   onDuplicate={() => { duplicateNotebook.mutateAsync(nb).then(copy => { if (copy?.id) navigate(`/notebooks/${copy.id}`); }); toast.success("Notebook duplicated!"); setActiveMenuId(null); }}
-                  onDelete={() => { handleDelete(nb); setActiveMenuId(null); }}
+                  onDelete={() => handleDelete(nb)}
                 />
               ))}
             </AnimatePresence>
@@ -871,6 +861,75 @@ export default function NotebooksPage() {
             onClose={() => setRenamingNb(null)}
             onSave={data => patchNotebook.mutateAsync({ id: renamingNb.id, ...data }).then(() => {})}
           />
+        )}
+      </AnimatePresence>
+
+      {/* ── Delete confirmation modal ─────────────────────────────────────── */}
+      <AnimatePresence>
+        {deletingNb && (
+          <motion.div
+            className="fixed inset-0 z-[200] flex items-center justify-center px-5"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            {/* Scrim */}
+            <div
+              className="absolute inset-0"
+              style={{ background: "rgba(5,12,25,0.75)", backdropFilter: "blur(6px)" }}
+              onClick={() => setDeletingNb(null)}
+            />
+
+            {/* Card */}
+            <motion.div
+              className="relative w-full max-w-sm rounded-2xl flex flex-col gap-5 p-6"
+              style={{ background: "#0f1e35", border: "0.5px solid rgba(255,255,255,0.09)" }}
+              initial={{ opacity: 0, scale: 0.94, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 12 }}
+              transition={{ type: "spring", stiffness: 420, damping: 32 }}
+            >
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: "rgba(239,68,68,0.1)", border: "0.5px solid rgba(239,68,68,0.2)" }}
+              >
+                <Trash2 className="w-5 h-5" style={{ color: "rgba(239,68,68,0.85)" }} />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <p className="text-[15px] font-medium" style={{ color: "#fff" }}>
+                  Delete &ldquo;{deletingNb.title}&rdquo;?
+                </p>
+                <p className="text-[13px] leading-relaxed" style={{ color: "rgba(255,255,255,0.5)" }}>
+                  This will permanently delete the notebook and all its sources and AI outputs. This cannot be undone.
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeletingNb(null)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
+                  style={{
+                    background: "rgba(255,255,255,0.05)",
+                    border: "0.5px solid rgba(255,255,255,0.09)",
+                    color: "rgba(255,255,255,0.75)",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { deleteNotebook.mutate(deletingNb.id); setDeletingNb(null); }}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
+                  style={{
+                    background: "rgba(239,68,68,0.15)",
+                    border: "0.5px solid rgba(239,68,68,0.3)",
+                    color: "rgba(239,68,68,0.9)",
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

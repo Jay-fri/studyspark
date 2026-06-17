@@ -36,16 +36,25 @@ export function useNotebooks() {
 
   const createNotebook = useMutation({
     mutationFn: async (input: Pick<Notebook, "title" | "description" | "emoji" | "color" | "cover_image_url" | "icon_url">): Promise<Notebook> => {
+      // Generate the ID client-side so navigation always has it — Supabase's
+      // .select().single() after insert can return null when RLS blocks the
+      // read-back, even though the insert itself succeeded.
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.from("notebooks") as any)
-        .insert({ ...input, user_id: userId })
-        .select()
-        .single();
+      const { error } = await (supabase.from("notebooks") as any)
+        .insert({ id, ...input, user_id: userId });
       if (error) throw error;
-      return data as Notebook;
+      return { id, ...input, user_id: userId!, created_at: now, updated_at: now } as Notebook;
     },
     onSuccess: (nb) => {
       addNotebook(nb);
+      // Write into the React Query cache immediately so NotebookPage finds the
+      // notebook on first render instead of redirecting back while the refetch
+      // is still in-flight.
+      qc.setQueryData<Notebook[]>(["notebooks", userId], (old) =>
+        old ? [nb, ...old] : [nb]
+      );
       qc.invalidateQueries({ queryKey: ["notebooks"] });
       toast.success("Notebook created!");
     },
