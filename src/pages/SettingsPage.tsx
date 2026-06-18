@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useTour } from "@/hooks/useTour";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
   User, Palette, Bell, Zap, Database,
-  Camera, Loader2,
+  Camera, Loader2, Smartphone,
   TrendingUp, TrendingDown, Eye, EyeOff,
   AlertTriangle, Download, Trash2, Lock,
 } from "@/lib/icons";
@@ -18,6 +18,13 @@ import { cn }            from "@/lib/utils";
 import type { TokenTransaction } from "@/types";
 import { NIGERIAN_UNIVERSITIES } from "@/types";
 import toast from "react-hot-toast";
+import { isNative } from "@/lib/capacitor";
+import {
+  registerPush,
+  unregisterPush,
+  getNativePushStatus,
+  type NativePushPermission,
+} from "@/lib/pushNotifications";
 
 type Tab = "profile" | "appearance" | "notifications" | "tokens" | "data";
 
@@ -339,6 +346,53 @@ function AppearanceTab() {
 function NotificationsTab() {
   const { emailNotifications, setEmailNotifications, lowTokenWarnings, setLowTokenWarnings } = useUIStore();
   const { isSupported, inAppBrowser, permission, isSubscribed, isLoading, subscribe, unsubscribe } = usePushNotifications();
+  const profile = useAuthStore((s) => s.profile);
+
+  // Native push state (Android only)
+  const [nativePermission, setNativePermission] = useState<NativePushPermission | "loading">("loading");
+  const [nativeEnabled, setNativeEnabled] = useState(false);
+  const [nativeLoading, setNativeLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isNative || !profile?.id) return;
+    (async () => {
+      const perm = await getNativePushStatus();
+      setNativePermission(perm);
+      if (perm === "granted") {
+        const { data } = await supabase
+          .from("device_tokens")
+          .select("id")
+          .eq("user_id", profile.id)
+          .limit(1)
+          .maybeSingle();
+        setNativeEnabled(!!data);
+      }
+    })();
+  }, [profile?.id]);
+
+  const handleNativeToggle = async (enable: boolean) => {
+    if (!profile?.id) return;
+    setNativeLoading(true);
+    try {
+      if (enable) {
+        await registerPush(profile.id);
+        const perm = await getNativePushStatus();
+        setNativePermission(perm);
+        if (perm === "granted") {
+          setNativeEnabled(true);
+          toast.success("Notifications enabled");
+        } else if (perm === "denied") {
+          toast("Go to phone Settings → Apps → StudyLM → Notifications to enable.", { icon: "ℹ️" });
+        }
+      } else {
+        await unregisterPush(profile.id);
+        setNativeEnabled(false);
+        toast("Notifications disabled. You can re-enable them anytime.", { icon: "🔕" });
+      }
+    } finally {
+      setNativeLoading(false);
+    }
+  };
 
   const rows = [
     {
@@ -371,41 +425,89 @@ function NotificationsTab() {
         </div>
       </Section>
 
-      <Section title="Push Notifications">
-        {inAppBrowser ? (
-          <div className="flex items-start gap-3 p-3 rounded-xl bg-orange-500/5 border border-orange-500/20">
-            <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
-            <p className="text-sm text-[var(--text-secondary)]">
-              Open StudyLM directly in <strong>Chrome</strong> (not via WhatsApp, Instagram, or another app's browser) to enable push notifications.
-            </p>
-          </div>
-        ) : !isSupported ? (
-          <p className="text-sm text-[var(--text-muted)]">
-            Push notifications require Chrome on Android or Safari on iOS 16.4+.
-          </p>
-        ) : permission === "denied" ? (
-          <div className="flex items-start gap-3 p-3 rounded-xl bg-orange-500/5 border border-orange-500/20">
-            <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
-            <p className="text-sm text-[var(--text-secondary)]">
-              Notifications are blocked in your browser. Enable them in browser or phone settings, then reload.
-            </p>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-[var(--text-primary)]">Enable Push Notifications</p>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                Receive updates directly on your phone or browser
+      {/* Native Android push notifications */}
+      {isNative && (
+        <Section title="Mobile App Notifications">
+          {nativePermission === "loading" ? (
+            <div className="flex justify-center py-2">
+              <Loader2 className="w-4 h-4 animate-spin text-[var(--brand-primary)]" />
+            </div>
+          ) : nativePermission === "denied" ? (
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-orange-500/5 border border-orange-500/20">
+              <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+              <p className="text-sm text-[var(--text-secondary)]">
+                Notifications are blocked. Go to <strong>phone Settings → Apps → StudyLM → Notifications</strong> to enable them.
               </p>
             </div>
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin text-[var(--brand-primary)]" />
-            ) : (
-              <Toggle on={isSubscribed} onChange={(v) => (v ? subscribe() : unsubscribe())} />
-            )}
-          </div>
-        )}
-      </Section>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex items-center justify-center rounded-xl shrink-0"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    background: "rgba(56,224,195,0.08)",
+                    border: "0.5px solid rgba(56,224,195,0.2)",
+                  }}
+                >
+                  <Smartphone className="w-4 h-4" style={{ color: "#38E0C3" }} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">Push Notifications</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                    Streaks, study reminders, and messages
+                  </p>
+                </div>
+              </div>
+              {nativeLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-[var(--brand-primary)]" />
+              ) : (
+                <Toggle on={nativeEnabled} onChange={handleNativeToggle} />
+              )}
+            </div>
+          )}
+        </Section>
+      )}
+
+      {/* Web push notifications (shown on non-native only) */}
+      {!isNative && (
+        <Section title="Push Notifications">
+          {inAppBrowser ? (
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-orange-500/5 border border-orange-500/20">
+              <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+              <p className="text-sm text-[var(--text-secondary)]">
+                Open StudyLM directly in <strong>Chrome</strong> (not via WhatsApp, Instagram, or another app's browser) to enable push notifications.
+              </p>
+            </div>
+          ) : !isSupported ? (
+            <p className="text-sm text-[var(--text-muted)]">
+              Push notifications require Chrome on Android or Safari on iOS 16.4+.
+            </p>
+          ) : permission === "denied" ? (
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-orange-500/5 border border-orange-500/20">
+              <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+              <p className="text-sm text-[var(--text-secondary)]">
+                Notifications are blocked in your browser. Enable them in browser or phone settings, then reload.
+              </p>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-[var(--text-primary)]">Enable Push Notifications</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                  Receive updates directly on your phone or browser
+                </p>
+              </div>
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-[var(--brand-primary)]" />
+              ) : (
+                <Toggle on={isSubscribed} onChange={(v) => (v ? subscribe() : unsubscribe())} />
+              )}
+            </div>
+          )}
+        </Section>
+      )}
     </div>
   );
 }

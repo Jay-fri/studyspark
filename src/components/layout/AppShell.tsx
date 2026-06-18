@@ -274,9 +274,10 @@ export function AppShell() {
   useEffect(() => {
     if (!profile?.id) return;
     scheduleStreakReminder();
-    if (localStorage.getItem("studyai_tour_complete")) {
-      registerPush(profile.id);
-    }
+    // Register for push on every app launch — Capacitor deduplicates the token
+    // upsert so this is safe to call repeatedly. No longer gated on tour completion
+    // since we want users to receive notifications from first login.
+    registerPush(profile.id);
   }, [profile?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // /notebooks/:id pages manage their own layout (tab bar replaces navbar on mobile)
@@ -379,13 +380,15 @@ export function AppShell() {
       <div
         className="relative flex flex-col flex-1 min-w-0 overflow-x-hidden"
         style={{ zIndex: 1 }}>
-        {/* Network/token/update banners */}
-        <UpdateBanner />
+        {/* Network/token banners */}
         <OfflineBanner />
         <TokenBanner />
 
         {/* Top navbar */}
         <Navbar />
+
+        {/* Update banner — below Navbar so it clears the status bar */}
+        <UpdateBanner />
 
         {/* Page content */}
         <main

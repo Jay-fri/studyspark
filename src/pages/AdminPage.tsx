@@ -1122,12 +1122,27 @@ function AnnouncementsTab() {
     setSendingPush(true);
     setPushResult(null);
     try {
+      // Web push (PWA / browser) — existing flow
       const { data, error } = await supabase.functions.invoke("send-push-notification", {
         body: { title: pushTitle.trim(), body: pushBody.trim(), url: pushUrl.trim() || "/" },
       });
       if (error) throw error;
       setPushResult(data);
-      toast.success(`Push sent to ${data.sent} device${data.sent !== 1 ? "s" : ""}!`);
+
+      // Native Android push (FCM)
+      const { data: fcmData, error: fcmError } = await supabase.functions.invoke("send-broadcast-notification", {
+        body: {
+          title: pushTitle.trim(),
+          body:  pushBody.trim(),
+          route: pushUrl.trim() || "/dashboard",
+          type:  "admin_message",
+        },
+      });
+      if (fcmError) console.error("FCM broadcast error:", fcmError);
+      if (fcmData?.errors?.length) console.warn("FCM delivery errors:", fcmData.errors);
+
+      const nativeSent = fcmData?.sent ?? 0;
+      toast.success(`Push sent — ${data.sent} web, ${nativeSent} native device${nativeSent !== 1 ? "s" : ""}`);
       setPushTitle(""); setPushBody(""); setPushUrl("/");
     } catch (err) {
       console.error(err);

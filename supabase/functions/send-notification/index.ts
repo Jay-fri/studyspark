@@ -92,14 +92,17 @@ serve(async (req) => {
       })
     );
 
-    // Mark row as natively delivered
-    await supabase
-      .from('notifications')
-      .update({ delivered_native: true })
-      .eq('id', notif.id);
+    const anySent = results.some(Boolean);
+
+    if (anySent) {
+      await supabase
+        .from('notifications')
+        .update({ delivered_native: true })
+        .eq('id', notif.id);
+    }
 
     return new Response(
-      JSON.stringify({ success: true, pushed: results.some(Boolean) }),
+      JSON.stringify({ success: true, pushed: anySent }),
       { status: 200, headers: corsHeaders }
     );
   } catch (err) {

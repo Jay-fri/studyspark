@@ -20,6 +20,11 @@ const config: CapacitorConfig = {
   },
 
   plugins: {
+    CapacitorHttp: {
+      // Routes all fetch/XHR through native HTTP on Android/iOS, bypassing
+      // WebView CORS restrictions. Fixes R2 model loading + document uploads.
+      enabled: true,
+    },
     SplashScreen: {
       launchShowDuration: 800,
       backgroundColor: '#0a1628',

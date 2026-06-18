@@ -1,6 +1,20 @@
 import { isNative } from '@/lib/capacitor';
 import { supabase } from '@/services/supabase';
 
+export type NativePushPermission = 'granted' | 'denied' | 'prompt';
+
+export async function getNativePushStatus(): Promise<NativePushPermission> {
+  if (!isNative) return 'denied';
+  const { PushNotifications } = await import('@capacitor/push-notifications');
+  const status = await PushNotifications.checkPermissions();
+  return status.receive as NativePushPermission;
+}
+
+export async function unregisterPush(userId: string) {
+  if (!isNative) return;
+  await supabase.from('device_tokens').delete().eq('user_id', userId);
+}
+
 // Dynamic imports so the web bundle never resolves @capacitor/push-notifications
 // (the package only needs to exist in the native build environment).
 

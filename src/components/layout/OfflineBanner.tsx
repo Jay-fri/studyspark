@@ -41,36 +41,41 @@ export function OfflineBanner() {
   }, []);
 
   const visible = status !== "online";
+  const isOffline = status === "offline";
 
   return (
     <AnimatePresence>
       {visible && (
         <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          transition={{ duration: 0.2, ease: "easeInOut" }}
-          style={{ overflow: "hidden" }}
+          initial={{ opacity: 0, x: 20, scale: 0.95 }}
+          animate={{ opacity: 1, x: 0, scale: 1 }}
+          exit={{ opacity: 0, x: 20, scale: 0.95 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          style={{
+            position: "fixed",
+            top: "calc(env(safe-area-inset-top, 0px) + 68px)",
+            right: "16px",
+            zIndex: 100,
+            maxWidth: "260px",
+            pointerEvents: "none",
+          }}
         >
           <div
-            className="flex items-center gap-2 px-4 py-2 text-xs font-medium"
+            className="flex items-center gap-2 text-xs font-medium"
             style={{
-              background: status === "offline"
-                ? "rgba(239,68,68,0.08)"
-                : "rgba(234,179,8,0.08)",
-              borderBottom: status === "offline"
-                ? "0.5px solid rgba(239,68,68,0.2)"
-                : "0.5px solid rgba(234,179,8,0.2)",
-              color: status === "offline"
-                ? "rgba(239,68,68,0.9)"
-                : "rgba(234,179,8,0.9)",
+              padding: "9px 14px",
+              borderRadius: "10px",
+              background: isOffline ? "rgba(239,68,68,0.12)" : "rgba(234,179,8,0.12)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              border: isOffline
+                ? "0.5px solid rgba(239,68,68,0.25)"
+                : "0.5px solid rgba(234,179,8,0.25)",
+              color: isOffline ? "rgba(239,68,68,0.9)" : "rgba(234,179,8,0.9)",
             }}
           >
             <WifiOff className="w-3.5 h-3.5 shrink-0" />
-            {status === "offline"
-              ? "You're offline — changes will sync when you reconnect."
-              : "Slow connection detected — some content may take longer to load."
-            }
+            <span>{isOffline ? "No internet connection" : "Slow connection"}</span>
           </div>
         </motion.div>
       )}

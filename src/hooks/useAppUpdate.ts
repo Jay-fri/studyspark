@@ -29,19 +29,29 @@ export function useAppUpdate() {
       .single();
 
     if (!data) return;
+    if (compareVersions(data.version, APP_VERSION) <= 0) return;
 
-    if (compareVersions(data.version, APP_VERSION) > 0) {
-      setUpdateInfo({
-        available: true,
-        version: data.version,
-        apkUrl: data.apk_url,
-        releaseNotes: data.release_notes ?? '',
-        isMandatory: data.is_mandatory,
-      });
-    }
+    // Don't re-show a non-mandatory banner the user already dismissed
+    const dismissed = localStorage.getItem('studylm_update_dismissed');
+    if (!data.is_mandatory && dismissed === data.version) return;
+
+    setUpdateInfo({
+      available: true,
+      version: data.version,
+      apkUrl: data.apk_url,
+      releaseNotes: data.release_notes ?? '',
+      isMandatory: data.is_mandatory,
+    });
   };
 
-  return { updateInfo, dismissUpdate: () => setUpdateInfo(null) };
+  const dismissUpdate = () => {
+    if (updateInfo && !updateInfo.isMandatory) {
+      localStorage.setItem('studylm_update_dismissed', updateInfo.version);
+    }
+    setUpdateInfo(null);
+  };
+
+  return { updateInfo, dismissUpdate };
 }
 
 function compareVersions(a: string, b: string): number {
