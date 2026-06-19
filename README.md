@@ -103,9 +103,13 @@ VITE_APP_URL=http://localhost:5173
 ```bash
 supabase secrets set GROQ_API_KEY=gsk_...
 supabase secrets set FLUTTERWAVE_SECRET_KEY=FLWSECK_TEST-...
+supabase secrets set R2_ACCOUNT_ID=your-cloudflare-account-id
+supabase secrets set R2_BUCKET_NAME=studylm-documents
+supabase secrets set R2_ACCESS_KEY_ID=your-r2-access-key-id
+supabase secrets set R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
 ```
 
-> **Security:** `GROQ_API_KEY` must **never** appear in the frontend bundle or Cloudflare environment variables. All Groq calls go through the `proxy-groq` Edge Function which holds the key as a server-side secret.
+> **Security:** `GROQ_API_KEY` and R2 credentials must **never** appear in the frontend bundle or Cloudflare environment variables. All document storage uses private R2 buckets with signed URLs generated server-side.
 
 ---
 
@@ -124,11 +128,18 @@ supabase secrets set FLUTTERWAVE_SECRET_KEY=FLWSECK_TEST-...
    supabase functions deploy proxy-groq
    supabase functions deploy verify-payment
    supabase functions deploy fetch-url
+   supabase functions deploy generate-upload-url
+   supabase functions deploy get-document-url
+   supabase functions deploy process-source
    ```
 4. Set Edge Function secrets:
    ```bash
    supabase secrets set GROQ_API_KEY=gsk_...
    supabase secrets set FLUTTERWAVE_SECRET_KEY=FLWSECK_TEST-...
+   supabase secrets set R2_ACCOUNT_ID=your-cloudflare-account-id
+   supabase secrets set R2_BUCKET_NAME=studylm-documents
+   supabase secrets set R2_ACCESS_KEY_ID=your-r2-access-key-id
+   supabase secrets set R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
    ```
 5. Supabase dashboard → Storage → create an `avatars` bucket set to **Public**.
 
@@ -216,6 +227,9 @@ Token crediting is **idempotent**: `credit_tokens()` checks `flutterwave_ref` be
 | `proxy-groq` | Validates JWT, enforces 10 req/min rate limit, strips prompt injection from user input, proxies to Groq API. Supports streaming SSE. Keeps API key server-side. |
 | `verify-payment` | Verifies Flutterwave transaction amount server-side, credits tokens idempotently, records the payment. |
 | `fetch-url` | Fetches a web page on behalf of the client (bypasses CORS). Used when adding a URL as a notebook source. Blocks private/localhost addresses. |
+| `generate-upload-url` | Generates presigned R2 PUT URLs for direct file uploads. Validates JWT and creates unique file keys per user. |
+| `get-document-url` | Generates presigned R2 GET URLs for secure document viewing. Validates ownership via RLS before returning signed URL (1hr expiry). |
+| `process-source` | Chunks uploaded document text into digestible pieces for AI processing. Stores chunks in `source_chunks` table. |
 
 All functions share `supabase/functions/_shared/cors.ts` for consistent CORS headers.
 
@@ -224,6 +238,7 @@ All functions share `supabase/functions/_shared/cors.ts` for consistent CORS hea
 ## Security Notes
 
 - **API keys:** Only the Supabase anon key and Flutterwave public key appear in the browser bundle. All secret keys live in Edge Function secrets.
+- **Document storage:** All uploaded documents are stored in private Cloudflare R2 buckets. Access is granted via temporary signed URLs (1hr expiry) generated server-side after ownership verification.
 - **RLS:** Every table has Row Level Security — a leaked anon key cannot read other users' data.
 - **Prompt injection:** `proxy-groq` strips known injection patterns from user messages before forwarding to Groq.
 - **Rate limiting:** `proxy-groq` enforces 10 requests/minute per authenticated user via a server-side atomic counter.

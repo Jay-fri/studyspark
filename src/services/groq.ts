@@ -341,6 +341,30 @@ export async function generateStarterQuestions(sourceText: string, signal?: Abor
   }
 }
 
+export async function formatDocumentText(rawText: string, signal?: AbortSignal): Promise<string> {
+  return groqComplete(
+    [
+      {
+        role: "system",
+        content: [
+          "You are a document formatting assistant.",
+          "Text was extracted from a PDF/Word file and lost its structure — headings, paragraphs, and lists are all run together.",
+          "Restore clean, readable markdown.",
+          "Rules: (1) Preserve ALL original words exactly. (2) Add # ## ### headings where you detect section titles or chapter names. (3) Fix paragraph breaks — separate logical paragraphs with a blank line. (4) Format bullet/numbered lists with - . (5) Do NOT add, summarise, or remove any content. (6) Return only the formatted markdown, nothing else.",
+        ].join(" "),
+      },
+      {
+        role: "user",
+        content: `Format this extracted document text:\n\n${sampleDocument(rawText, 10000)}`,
+      },
+    ],
+    GROQ_MODELS.fast,
+    false,
+    signal,
+    0.1
+  );
+}
+
 // ─── Dispatcher ──────────────────────────────────────────────────────────────
 
 export async function generateAIOutput(

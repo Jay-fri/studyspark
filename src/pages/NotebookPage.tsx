@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from "react-resizable-panels";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import { AnimatePresence, motion } from "framer-motion";
-import { BookOpen, MessageSquare, Sparkles, Plus, ArrowLeft } from "@/lib/icons";
+import { BookOpen, MessageSquare, Sparkles, Plus, ArrowLeft, Timer } from "@/lib/icons";
 import toast from "react-hot-toast";
 
 import { useNotebookStore } from "@/stores/notebookStore";
@@ -235,12 +235,8 @@ export default function NotebookPage() {
   }, [generate, aiOutputs.length]);
 
   const handleGenerate = useCallback((type: AIOutputType) => {
-    if (type === "quiz" || type === "flashcards") {
-      setOptionsType(type);
-    } else {
-      runGenerate(type);
-    }
-  }, [runGenerate]);
+    navigate(`/notebooks/${notebookId}/view/${type}`);
+  }, [navigate, notebookId]);
 
   const handleOptionsConfirm = useCallback((options: GenerationOptions) => {
     if (!optionsType) return;
@@ -250,14 +246,8 @@ export default function NotebookPage() {
   }, [optionsType, runGenerate]);
 
   const handleOpen = useCallback((type: AIOutputType) => {
-    _setModalType(type);
-    _setModalOpen(true);
-    setActiveOutput(type);
-    if (notebookId) {
-      ssSet(`nb-modal-type-${notebookId}`, type);
-      ssSet(`nb-modal-open-${notebookId}`, "true");
-    }
-  }, [setActiveOutput, notebookId]);
+    navigate(`/notebooks/${notebookId}/view/${type}`);
+  }, [navigate, notebookId]);
 
   const handleModalGenerate = useCallback(async () => {
     if (!modalType) return;
@@ -277,6 +267,10 @@ export default function NotebookPage() {
   const isGeneratingThis = isGenerating && generatingType === modalType;
   const safeBalance      = balance === Infinity ? 999 : balance;
 
+  const handleOpenSource = useCallback((sourceId: string) => {
+    navigate(`/notebooks/${notebookId}/source/${sourceId}`);
+  }, [navigate, notebookId]);
+
   const studioProps = {
     outputs:        aiOutputs,
     isGenerating,
@@ -285,6 +279,8 @@ export default function NotebookPage() {
     onGenerate:     handleGenerate,
     onOpen:         handleOpen,
     onTopUp:        () => setPaymentModalOpen(true),
+    sources,
+    onOpenSource:   handleOpenSource,
   };
 
   if (!notebookId) return null;
@@ -356,6 +352,15 @@ export default function NotebookPage() {
             <Plus className="w-4 h-4" />
           </button>
         )}
+
+        {/* Study timer shortcut */}
+        <button
+          onClick={() => navigate(`/study/timer?notebook=${notebookId}`)}
+          className="flex items-center justify-center w-10 h-full border-l border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--brand-primary)] hover:bg-[var(--surface-1)] transition-colors shrink-0"
+          title="Focus timer"
+        >
+          <Timer className="w-4 h-4" />
+        </button>
       </div>
 
       {/* ── Onboarding progress steps (both mobile + desktop) ─────────────── */}

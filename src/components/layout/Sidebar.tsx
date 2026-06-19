@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  LayoutDashboard, BookMarked, Library, Settings, Shield, LogOut, Dna, MessageSquare, Coffee,
+  LayoutDashboard, BookMarked, Library, Settings, Shield, LogOut, Dna, MessageSquare, Coffee, Timer,
 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/uiStore";
@@ -11,13 +11,14 @@ import { activeTour } from "@/hooks/useTour";
 import { AnimatedHamburger } from "@/components/ui/AnimatedHamburger";
 
 const NAV_ITEMS = [
-  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard",  tourId: "tour-sidebar-home"      },
-  { to: "/notebooks", icon: BookMarked,       label: "Notebooks",  tourId: "tour-sidebar-notebooks" },
-  { to: "/library",   icon: Library,          label: "Library",    tourId: "tour-sidebar-library"   },
-  { to: "/anatomy",   icon: Dna,              label: "Anatomy 3D", tourId: "tour-sidebar-anatomy"   },
-  { to: "/break",     icon: Coffee,           label: "Break Room", tourId: "tour-break-room"        },
-  { to: "/feedback",  icon: MessageSquare,    label: "Feedback",   tourId: "tour-sidebar-feedback"  },
-  { to: "/settings",  icon: Settings,         label: "Settings",   tourId: "tour-sidebar-settings"  },
+  { to: "/dashboard",   icon: LayoutDashboard, label: "Dashboard",  tourId: "tour-sidebar-home"      },
+  { to: "/notebooks",   icon: BookMarked,       label: "Notebooks",  tourId: "tour-sidebar-notebooks" },
+  { to: "/library",     icon: Library,          label: "Library",    tourId: "tour-sidebar-library"   },
+  { to: "/study/timer", icon: Timer,            label: "Focus Mode",  tourId: undefined               },
+  { to: "/anatomy",     icon: Dna,              label: "Anatomy 3D", tourId: "tour-sidebar-anatomy"   },
+  { to: "/break",       icon: Coffee,           label: "Break Room", tourId: "tour-break-room"        },
+  { to: "/feedback",    icon: MessageSquare,    label: "Feedback",   tourId: "tour-sidebar-feedback"  },
+  { to: "/settings",    icon: Settings,         label: "Settings",   tourId: "tour-sidebar-settings"  },
 ] as const;
 
 function TokenDots({ balance, max = 1000 }: { balance: number; max?: number }) {

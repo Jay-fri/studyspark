@@ -16,6 +16,10 @@ const AuthPage       = lazy(() => import("@/pages/AuthPage"));
 const DashboardPage  = lazy(() => import("@/pages/DashboardPage"));
 const NotebooksPage  = lazy(() => import("@/pages/NotebooksPage"));
 const NotebookPage   = lazy(() => import("@/pages/NotebookPage"));
+const OutputPage        = lazy(() => import("@/pages/OutputPage"));
+const SourceViewerPage  = lazy(() => import("@/pages/SourceViewerPage"));
+const StudyTimerPage    = lazy(() => import("@/pages/StudyTimerPage"));
+const StudyGamesPage    = lazy(() => import("@/pages/StudyGamesPage"));
 const LibraryPage    = lazy(() => import("@/pages/LibraryPage"));
 const UploadPage     = lazy(() => import("@/pages/UploadPage"));
 const ChatPage       = lazy(() => import("@/pages/ChatPage"));
@@ -76,7 +80,10 @@ export default function App() {
                 <Route element={<AppShell />}>
                   <Route path="/dashboard"        element={<DashboardPage />} />
                   <Route path="/notebooks"         element={<NotebooksPage />} />
-                  <Route path="/notebooks/:id"     element={<NotebookPage />} />
+                  <Route path="/notebooks/:id"           element={<NotebookPage />} />
+                  <Route path="/notebooks/:id/view/:type"        element={<OutputPage />} />
+                  <Route path="/notebooks/:id/source/:sourceId" element={<SourceViewerPage />} />
+                  <Route path="/study/timer"                     element={<StudyTimerPage />} />
                   <Route path="/library"           element={<LibraryPage />} />
                   <Route path="/upload"            element={<UploadPage />} />
                   <Route path="/chat"              element={<ChatPage />} />
@@ -89,6 +96,7 @@ export default function App() {
                   <Route path="/study/review"      element={<StudyReviewPage />} />
                   <Route path="/study/:notebookId" element={<StudyModePage />} />
                   <Route path="/break"                    element={<BreakRoomPage />} />
+                  <Route path="/break/study"              element={<StudyGamesPage />} />
                   <Route path="/break/chess"              element={<ChessPage />} />
                   <Route path="/break/chess/:id"          element={<ChessPage />} />
                   <Route path="/break/chess/mp/:id"       element={<ChessPage />} />

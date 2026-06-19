@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
-import { Loader2, Zap, RefreshCw, ChevronRight, ChevronLeft } from "@/lib/icons";
+import { Loader2, Zap, RefreshCw, ChevronRight, ChevronLeft, FileText } from "@/lib/icons";
 import { useTokenCosts } from "@/hooks/useTokenCosts";
 import { cn } from "@/lib/utils";
-import type { AIOutput, AIOutputType } from "@/types";
+import type { AIOutput, AIOutputType, Source } from "@/types";
 
 const STUDIO_ITEMS: {
   type:  AIOutputType;
@@ -31,11 +31,17 @@ interface Props {
   onTopUp:        () => void;
   collapsed?:     boolean;
   onCollapse?:    () => void;
+  sources?:       Source[];
+  onOpenSource?:  (sourceId: string) => void;
 }
+
+const SOURCE_TYPE_ICON: Record<string, string> = {
+  pdf: '📄', docx: '📝', txt: '📃', md: '📋', url: '🔗', text: '✏️',
+};
 
 export function StudioPanel({
   outputs, isGenerating, generatingType, balance, onGenerate, onOpen, onTopUp,
-  collapsed, onCollapse,
+  collapsed, onCollapse, sources = [], onOpenSource,
 }: Props) {
   const [hoveredType, setHoveredType] = useState<AIOutputType | null>(null);
   const costs = useTokenCosts();
@@ -245,6 +251,40 @@ export function StudioPanel({
             <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
               Click any card above to generate AI study materials from your sources.
             </p>
+          </div>
+        )}
+
+        {/* ── Source materials ── */}
+        {sources.length > 0 && onOpenSource && (
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)] mb-2 px-1">
+              Source Materials
+            </p>
+            <div className="space-y-1.5">
+              {sources.map((src) => {
+                const readMin = src.word_count ? Math.ceil(src.word_count / 250) : null;
+                return (
+                  <button
+                    key={src.id}
+                    onClick={() => onOpenSource(src.id)}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[var(--surface-0)] border border-[var(--border)] hover:border-[var(--brand-primary)]/40 hover:bg-[var(--brand-primary)]/5 transition-all text-left group"
+                  >
+                    <span className="text-base leading-none shrink-0">
+                      {SOURCE_TYPE_ICON[src.type] ?? '📄'}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-[var(--text-primary)] truncate">
+                        {src.title}
+                      </p>
+                      <p className="text-[10px] text-[var(--text-muted)]">
+                        {readMin ? `~${readMin} min read` : src.type.toUpperCase()}
+                      </p>
+                    </div>
+                    <FileText className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--brand-primary)] transition-colors shrink-0" />
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

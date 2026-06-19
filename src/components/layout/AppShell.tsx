@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { queryClient } from "@/lib/queryClient";
 import { useTour } from "@/hooks/useTour";
 import { Toaster } from "react-hot-toast";
 import toast from "react-hot-toast";
@@ -267,6 +268,55 @@ export function AppShell() {
     const timer = setTimeout(() => startTour(), 1200);
     return () => clearTimeout(timer);
   }, [profile]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Record a streak point once per calendar day on app open — the RPC is idempotent
+  // per day so it's safe to call on every mount; we short-circuit with localStorage
+  // to avoid the network call on rapid re-renders / hot-reload.
+  useEffect(() => {
+    if (!profile?.id) return;
+    const today = new Date().toISOString().slice(0, 10);
+    if (localStorage.getItem('studylm_last_open') === today) return;
+    localStorage.setItem('studylm_last_open', today);
+    (async () => { try { await supabase.rpc('record_activity', { p_user_id: profile.id }); } catch {} })();
+  }, [profile?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Resume / visibility handler ────────────────────────────────────────────
+  // When the user comes back to the app after a long absence (switched tabs,
+  // locked phone, minimised app), we:
+  //   1. Refresh the Supabase JWT so auth doesn't silently expire
+  //   2. Invalidate all React Query caches so stale data isn't shown indefinitely
+  // We track the last-resume timestamp to avoid hammering the server on rapid
+  // tab switches — only fires if the absence was longer than 3 minutes.
+  const lastResumeRef = useRef<number>(Date.now());
+  const RESUME_THRESHOLD_MS = 3 * 60 * 1000;
+
+  const handleResume = useCallback(async () => {
+    const now = Date.now();
+    if (now - lastResumeRef.current < RESUME_THRESHOLD_MS) return;
+    lastResumeRef.current = now;
+
+    // Refresh auth session (Capacitor's background timer can't fire while asleep)
+    try { await supabase.auth.refreshSession(); } catch { /* non-critical */ }
+
+    // Invalidate all queries — React Query will re-fetch them as components become visible
+    queryClient.invalidateQueries();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    // Web: page visibility API (tab switch, phone lock screen)
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") handleResume();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    // Capacitor native: app foregrounded (dispatched in capacitor.ts)
+    window.addEventListener("app-resumed", handleResume);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("app-resumed", handleResume);
+    };
+  }, [handleResume]);
 
   // Native Android notification setup — runs once per session after auth resolves.
   // Push permission is only requested after the onboarding tour is done so the

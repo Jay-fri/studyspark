@@ -7,12 +7,13 @@ import { useNotebooks } from "@/hooks/useNotebook";
 import { NotebookCardSkeleton, ActivityRowSkeleton } from "@/components/ui/Skeleton";
 import { format, formatDistanceToNow } from "date-fns";
 import { useSRS } from "@/hooks/useSRS";
-import { ChevronRight, Layers } from "@/lib/icons";
+import { ChevronRight, Layers, Timer } from "@/lib/icons";
 import { supabase } from "@/services/supabase";
 import { useAuthStore } from "@/stores/authStore";
 import { useNotebookStore } from "@/stores/notebookStore";
 import { useUIStore } from "@/stores/uiStore";
 import { StreakBadge } from "@/components/games/StreakBadge";
+import { useAIInsight } from "@/hooks/useAIInsight";
 import type { AIOutput } from "@/types";
 import toast from "react-hot-toast";
 import { NotebookIcon, DEFAULT_NOTEBOOK_ICON } from "@/lib/notebookIcons";
@@ -77,6 +78,55 @@ const OUTPUT_LABELS: Record<
     bg: "rgba(236,72,153,0.10)",
   },
 };
+
+// ── Daily motivational message (changes every calendar day) ──────────────
+const DAILY_MESSAGES = [
+  { text: "Open one notebook and read for 10 minutes. Small sessions compound.", tag: "Daily habit" },
+  { text: "You're not behind. You're exactly where you need to be — just keep showing up.", tag: "Reminder" },
+  { text: "The best study session is the one you actually start. Go.", tag: "Push" },
+  { text: "Reading once is information. Reading twice is knowledge. Re-read something today.", tag: "Study tip" },
+  { text: "Your brain consolidates memories while you sleep. Study tonight, wake up smarter.", tag: "Science" },
+  { text: "Pick one concept from your notes and explain it to yourself out loud. If you can't, re-read it.", tag: "Active recall" },
+  { text: "Flashcards aren't just for memorising — they show you exactly what you don't know yet.", tag: "Study tip" },
+  { text: "Every page you read today is a page your future self won't have to panic over.", tag: "Motivation" },
+  { text: "Consistency > intensity. 15 minutes every day beats 3 hours on Sunday.", tag: "Habit" },
+  { text: "If you've been avoiding a tough topic, today is a good day to open it.", tag: "Push" },
+  { text: "Generate a quiz on something you think you already know. You might be surprised.", tag: "Challenge" },
+  { text: "Learning is uncomfortable. That discomfort is the feeling of growing.", tag: "Mindset" },
+  { text: "Your streak is a promise to yourself. Keep it.", tag: "Streak" },
+  { text: "One notebook, one concept, five minutes. You can always do five minutes.", tag: "Start small" },
+  { text: "The students who do well aren't smarter — they're more consistent. Be consistent.", tag: "Mindset" },
+  { text: "Try the Focus Mode today. Distraction-free reading hits different.", tag: "Feature tip" },
+  { text: "Don't just read — generate a summary and compare it to what you remember.", tag: "Active learning" },
+  { text: "Your notes from last week are already fading. A quick review locks them in.", tag: "Spaced repetition" },
+  { text: "Progress is invisible until it suddenly isn't. Trust the process.", tag: "Patience" },
+  { text: "Hard topics don't get easier by avoiding them. They get harder. Open the notebook.", tag: "Push" },
+  { text: "You've read things before that seemed impossible. This is no different.", tag: "Confidence" },
+  { text: "Set a 25-minute timer, put your phone face down, and just read. That's it.", tag: "Technique" },
+  { text: "The summary feature exists for a reason — use it to get the big picture first.", tag: "Strategy" },
+  { text: "Good readers are made, not born. You become one by reading. Today.", tag: "Motivation" },
+  { text: "If it feels hard, that means it's working. Lean into it.", tag: "Push" },
+  { text: "Re-read your key concepts. What you skimmed yesterday might be tomorrow's exam question.", tag: "Study tip" },
+  { text: "An hour of focused reading is worth more than three hours of distracted scrolling.", tag: "Focus" },
+  { text: "Your future self is watching what you do right now. Make them proud.", tag: "Perspective" },
+  { text: "Use the AI chat to quiz yourself on what you've read. It's free practice.", tag: "Feature tip" },
+  { text: "Depth over breadth. Really understand one thing today instead of skimming five.", tag: "Strategy" },
+  { text: "The habit of opening your notes every day is more powerful than any single study session.", tag: "Habit" },
+  { text: "Tired? That's fine. Five slow minutes of reading still beats zero.", tag: "Permission" },
+  { text: "Your streak is a chain. Don't break it today.", tag: "Streak" },
+  { text: "Ask the AI to explain something you found confusing. Use what you have.", tag: "Feature tip" },
+  { text: "The gap between where you are and where you want to be is closed by today's work.", tag: "Motivation" },
+  { text: "You don't have to read perfectly. You just have to read.", tag: "Permission" },
+  { text: "Revisit a notebook you haven't opened in a while. You'll be surprised how much you remember.", tag: "Recall" },
+  { text: "Create flashcards for concepts you struggle with, not just the ones you know.", tag: "Study tip" },
+  { text: "You learn better when you're curious. Find one thing that actually interests you and start there.", tag: "Mindset" },
+  { text: "Every expert was once a beginner who refused to stop. Keep going.", tag: "Long game" },
+];
+
+function getDailyMessage() {
+  const dayIndex = Math.floor(Date.now() / 86_400_000);
+  return DAILY_MESSAGES[dayIndex % DAILY_MESSAGES.length];
+}
 
 function greeting(name: string) {
   const h = new Date().getHours();
@@ -235,8 +285,55 @@ export default function DashboardPage() {
     return count;
   }, [allFlashcardOutputs, getDueCards]);
 
-  const recentNotebooks = useMemo(() => notebooks.slice(0, 3), [notebooks]);
+  // Word counts per notebook (for read-time display on cards)
+  const { data: notebookWordCounts = {} } = useQuery<Record<string, number>>({
+    queryKey: ["notebook-word-counts", userId],
+    queryFn: async () => {
+      const ids = notebooks.map((n) => n.id);
+      if (!ids.length) return {};
+      const { data } = await supabase
+        .from("sources")
+        .select("notebook_id, word_count")
+        .in("notebook_id", ids);
+      const result: Record<string, number> = {};
+      for (const src of data ?? []) {
+        result[src.notebook_id] = (result[src.notebook_id] ?? 0) + (src.word_count ?? 0);
+      }
+      return result;
+    },
+    enabled: !!userId && notebooks.length > 0,
+    staleTime: 120_000,
+  });
+
   const isNewUser = !notebooksLoading && notebooks.length === 0;
+
+  // AI personalized insight (cached 12h, generated once per session)
+  const { insight } = useAIInsight({
+    name: firstName,
+    notebookTitles: notebooks.slice(0, 4).map((n) => n.title),
+    recentOutputTypes: recentOutputs.map((o) => o.type),
+    streak: currentStreak,
+    enabled: !isNewUser,
+  });
+
+  // Smart recommendations (rule-based, no AI cost)
+  const recommendations = useMemo(() => {
+    const recs: { icon: string; text: string; to: string }[] = [];
+    if (totalDue > 0)
+      recs.push({ icon: "🔁", text: `Review ${totalDue} flashcard${totalDue !== 1 ? "s" : ""} due`, to: "/study/review" });
+    // Suggest flashcards if user has a summary but no flashcards for some notebook
+    const nbsWithSummary = new Set(recentOutputs.filter((o) => o.type === "summary").map((o) => o.notebook_id));
+    const nbsWithFlashcards = new Set(recentOutputs.filter((o) => o.type === "flashcards").map((o) => o.notebook_id));
+    const suggestNb = notebooks.find((nb) => nbsWithSummary.has(nb.id) && !nbsWithFlashcards.has(nb.id));
+    if (suggestNb && recs.length < 3)
+      recs.push({ icon: "🃏", text: `Create flashcards for "${suggestNb.title}"`, to: `/notebooks/${suggestNb.id}` });
+    // Suggest a focus session
+    if (notebooks.length > 0 && recs.length < 3)
+      recs.push({ icon: "⏱️", text: "Start a Focus Mode session", to: "/study/timer" });
+    return recs.slice(0, 3);
+  }, [totalDue, recentOutputs, notebooks]);
+
+  const recentNotebooks = useMemo(() => notebooks.slice(0, 3), [notebooks]);
 
   // Summary text for subtitle
   const summaryParts: string[] = [];
@@ -351,6 +448,29 @@ export default function DashboardPage() {
             My library
           </Link>
 
+          {/* Focus mode pill */}
+          <Link
+            to="/study/timer"
+            className="flex items-center gap-2 px-4 py-2 rounded-[9px] text-sm font-medium transition-all hover:-translate-y-px"
+            style={{
+              background: "var(--surface-2)",
+              border: "0.5px solid var(--border)",
+              color: "var(--text-secondary)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "var(--surface-3)";
+              e.currentTarget.style.borderColor = "var(--brand-primary)";
+              e.currentTarget.style.color = "var(--text-primary)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "var(--surface-2)";
+              e.currentTarget.style.borderColor = "var(--border)";
+              e.currentTarget.style.color = "var(--text-secondary)";
+            }}>
+            <Timer className="w-3.5 h-3.5" />
+            Focus Mode
+          </Link>
+
           {/* Review pill if cards due */}
           {totalDue > 0 && (
             <Link
@@ -376,6 +496,74 @@ export default function DashboardPage() {
             </Link>
           )}
         </motion.div>
+
+        {/* ── Daily message ── */}
+        {!isNewUser && (() => {
+          const msg = getDailyMessage();
+          return (
+            <motion.div variants={fadeUp} className="mb-4">
+              <div
+                className="flex items-start gap-3 px-4 py-3.5 rounded-xl"
+                style={{ background: "rgba(255,255,255,0.03)", border: "0.5px solid rgba(255,255,255,0.07)" }}
+              >
+                <span className="text-base mt-0.5 shrink-0">💬</span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: "rgba(56,224,195,0.6)" }}>
+                    {msg.tag}
+                  </p>
+                  <p className="text-[13px] leading-relaxed" style={{ color: "rgba(255,255,255,0.7)" }}>
+                    {msg.text}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })()}
+
+        {/* ── AI insight + smart recommendations ── */}
+        {!isNewUser && (insight || recommendations.length > 0) && (
+          <motion.div variants={fadeUp} className="mb-5">
+            <div
+              className="rounded-xl p-4 space-y-3"
+              style={{
+                background: "rgba(56,224,195,0.04)",
+                border: "0.5px solid rgba(56,224,195,0.15)",
+              }}
+            >
+              {insight && (
+                <p className="text-[13px] leading-relaxed" style={{ color: "rgba(255,255,255,0.75)" }}>
+                  <span className="mr-1.5">✨</span>{insight}
+                </p>
+              )}
+              {recommendations.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-0.5">
+                  {recommendations.map((rec) => (
+                    <Link
+                      key={rec.to}
+                      to={rec.to}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-[9px] text-xs font-medium transition-all"
+                      style={{
+                        background: "rgba(255,255,255,0.05)",
+                        border: "0.5px solid rgba(255,255,255,0.1)",
+                        color: "rgba(255,255,255,0.65)",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = "rgba(56,224,195,0.3)";
+                        e.currentTarget.style.color = "#38E0C3";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
+                        e.currentTarget.style.color = "rgba(255,255,255,0.65)";
+                      }}
+                    >
+                      <span>{rec.icon}</span> {rec.text}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
 
         {/* ── Onboarding hero (zero-notebook state) ── */}
         {isNewUser && (
@@ -669,7 +857,10 @@ export default function DashboardPage() {
               <div className="hidden sm:grid grid-cols-3 gap-3">
                 {recentNotebooks.map((nb, i) => (
                   <div key={nb.id} id={i === 0 ? "tour-notebook-card" : undefined}>
-                    <NotebookCard nb={nb} />
+                    <NotebookCard
+                      nb={nb}
+                      readMinutes={notebookWordCounts[nb.id] ? Math.ceil(notebookWordCounts[nb.id] / 250) : undefined}
+                    />
                   </div>
                 ))}
               </div>
@@ -678,7 +869,11 @@ export default function DashboardPage() {
               <div className="flex gap-3 overflow-x-auto scrollbar-none -mx-5 px-5 pb-2 sm:hidden">
                 {recentNotebooks.map((nb, i) => (
                   <div key={nb.id} id={i === 0 ? "tour-notebook-card" : undefined}>
-                    <NotebookCard nb={nb} mobile />
+                    <NotebookCard
+                      nb={nb}
+                      mobile
+                      readMinutes={notebookWordCounts[nb.id] ? Math.ceil(notebookWordCounts[nb.id] / 250) : undefined}
+                    />
                   </div>
                 ))}
               </div>
@@ -811,9 +1006,10 @@ interface NbCardProps {
     updated_at: string;
   };
   mobile?: boolean;
+  readMinutes?: number;
 }
 
-function NotebookCard({ nb, mobile }: NbCardProps) {
+function NotebookCard({ nb, mobile, readMinutes }: NbCardProps) {
   const color = nb.color || "#38E0C3";
   return (
     <Link
@@ -899,10 +1095,17 @@ function NotebookCard({ nb, mobile }: NbCardProps) {
         <p className="text-[11px]" style={{ color: "var(--text-dim)" }}>
           {formatDistanceToNow(new Date(nb.updated_at), { addSuffix: true })}
         </p>
-        <div
-          className="w-1.5 h-1.5 rounded-full"
-          style={{ background: color }}
-        />
+        <div className="flex items-center gap-1.5">
+          {readMinutes != null && readMinutes > 0 && (
+            <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>
+              ~{readMinutes}m
+            </span>
+          )}
+          <div
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ background: color }}
+          />
+        </div>
       </div>
     </Link>
   );

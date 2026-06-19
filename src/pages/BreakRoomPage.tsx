@@ -1471,6 +1471,28 @@ export default function BreakRoomPage() {
               newLink="/break/ttt"
               hasActive={false}
             />
+
+            <GameCard
+              icon={
+                <div className="flex gap-2 items-center">
+                  {['⚡', '🎯', '🔀'].map((icon, i) => (
+                    <div
+                      key={i}
+                      className="w-10 h-10 flex items-center justify-center rounded-xl text-xl"
+                      style={{ background: 'rgba(56,224,195,0.08)', border: '0.5px solid rgba(56,224,195,0.18)' }}
+                    >
+                      {icon}
+                    </div>
+                  ))}
+                </div>
+              }
+              title="Study Games"
+              subtitle="Flash Sprint · Quick Quiz · Word Scramble"
+              activeGame={null}
+              resumeLink="/break/study"
+              newLink="/break/study"
+              hasActive={false}
+            />
           </motion.div>
 
         </motion.div>

@@ -56,10 +56,29 @@ async function extractFromPDF(file: File): Promise<string> {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page    = await pdf.getPage(i);
     const content = await page.getTextContent();
-    const text    = content.items
-      .map((item) => ("str" in item ? item.str : ""))
-      .join(" ");
-    pages.push(text);
+    
+    let pageText = "";
+    let lastY = 0;
+    
+    for (const item of content.items) {
+      if ("str" in item && item.str.trim()) {
+        const currentY = item.transform?.[5] ?? 0;
+        
+        // New line if Y position changed significantly (different line)
+        if (lastY && Math.abs(currentY - lastY) > 2) {
+          pageText += "\n";
+        } 
+        // Add space if continuing same line and previous text doesn't end with space/hyphen
+        else if (pageText && !pageText.endsWith(" ") && !pageText.endsWith("-")) {
+          pageText += " ";
+        }
+        
+        pageText += item.str;
+        lastY = currentY;
+      }
+    }
+    
+    pages.push(pageText);
   }
 
   return pages.join("\n\n");
