@@ -7,8 +7,8 @@ import { supabase } from '@/services/supabase';
 // ─── Config ──────────────────────────────────────────────────────────────────
 
 const APK_URL =
-  'https://yguqquyvuflcmlhwdzal.supabase.co/storage/v1/object/public/releases/study-spark-v1.0.2.apk';
-const APK_VERSION = '1.0.2';
+  'https://yguqquyvuflcmlhwdzal.supabase.co/storage/v1/object/public/releases/app-release.apk';
+const APK_VERSION = '1.0.3';
 const APK_SIZE = '11.07 MB';
 const APP_URL = 'https://studylm.pages.dev/download';
 
