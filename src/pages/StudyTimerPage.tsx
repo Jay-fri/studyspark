@@ -564,7 +564,7 @@ function FocusMode({ material, durationMinutes, onExit }: {
       </div>
 
       {/* Reading area — PDFs fill the full area; text content gets scrollable padded container */}
-      {material.kind === 'file' ? (
+      {material.kind === 'source' ? (
         <div className="flex-1 overflow-hidden">
           <FocusModeContent material={material} />
         </div>
@@ -577,7 +577,7 @@ function FocusMode({ material, durationMinutes, onExit }: {
       )}
 
       {/* Highlight → Ask AI (not shown for PDFs since selection doesn't work in iframes) */}
-      {material.kind !== 'pdf' && highlightPos && (
+      {material.kind !== 'source' && highlightPos && (
         <div
           className="fixed z-[205] px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer select-none"
           style={{ top: highlightPos.top - 44, left: highlightPos.left, transform: 'translateX(-50%)', background: 'rgba(56,224,195,0.18)', border: `0.5px solid rgba(56,224,195,0.4)`, color: MINT, backdropFilter: 'blur(12px)' }}

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { DocumentViewer } from '@/components/viewer/DocumentViewer';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -16,7 +16,6 @@ export default function SourceViewerPage() {
   const [jotText, setJotText] = useState('');
   const [savedJots, setSavedJots] = useState<Array<{ id: string; text: string; timestamp: string }>>([]);
   const [chatQuery, setChatQuery] = useState('');
-  const contentRef = useRef<HTMLDivElement>(null);
 
   const { data: source, isLoading } = useQuery<Source>({
     queryKey: ['source', sourceId],

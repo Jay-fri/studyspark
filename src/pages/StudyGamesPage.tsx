@@ -534,7 +534,9 @@ export default function StudyGamesPage() {
 
   const handleDone = (r: Results) => {
     setResults(r);
-    if (userId) supabase.rpc('record_activity', { p_user_id: userId }).catch(() => {});
+    if (userId) {
+      void supabase.rpc('record_activity', { p_user_id: userId });
+    }
     setPhase('results');
   };
 

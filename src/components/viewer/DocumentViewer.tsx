@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { ExternalLink, RefreshCw } from '@/lib/icons';
+import { useState, useRef } from 'react';
+import { RefreshCw } from '@/lib/icons';
 import { useDocumentUrl } from '@/hooks/useDocumentUrl';
 
 type Props = {
